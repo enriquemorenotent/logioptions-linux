@@ -1,7 +1,8 @@
-# Options+ for Linux — reverse engineering workspace
+# Options for Linux
 
-Goal: a Linux implementation backed by observations of the official Logitech
-Options+ application, including its device protocol and desktop behavior.
+An independent, experimental Linux implementation of Logitech Options+ features,
+backed by observations of the official application and native device protocol.
+Not affiliated with or endorsed by Logitech.
 
 **Status: experimental native device controls for MX Master 4 over Bolt.
 This is not a complete Options+ port.**
@@ -10,6 +11,15 @@ Verified on hardware: device inspection, DPI write/read/restore, SmartShift
 write/read/restore, hardware button remap write/read/restore, and a vibration
 physically confirmed by the user. Keyboard inspection also works. Thumb-pad press/release capture is verified. A first GNOME Actions Ring implementation is available; gestures, profiles,
 macros, Flow and full ring parity remain unfinished.
+
+Clone the repository and run from its directory. The desktop app needs Python 3,
+PyGObject, GTK 4 and libadwaita; the Actions Ring extension currently targets
+GNOME 50. Development has been tested on Ubuntu 26.04 with a Bolt receiver.
+
+```sh
+git clone https://github.com/enriquemorenotent/logioptions-linux.git
+cd logioptions-linux
+```
 
 Launch the GTK 4 desktop app using the system Python with GTK/libadwaita bindings:
 
@@ -72,6 +82,12 @@ change running applications. This baseline does not capture protocol traffic.
 Do not run original installers against the everyday Linux desktop or assume Wine
 implements Logitech's drivers. Runtime investigation needs an isolated Windows
 or macOS environment with the relevant hardware and permission to capture it.
+
+A public checkout does **not** include Logitech's device artwork, fonts, installers,
+or the private hardware captures referenced in the research notes. The app uses
+system-font/icon fallbacks without the locally extracted UI assets. Tests that
+need those research artifacts skip when the files are absent. There is currently
+no packaged release or automatic device-permission setup.
 
 The native UI now follows the observed Options+ 2.9 device pages. See
 [UI reference and verification](research/UI-REFERENCE.md) for screenshots,
