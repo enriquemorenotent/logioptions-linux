@@ -1,0 +1,5 @@
+.logi-ring-item { background: #252331; color: #f6f2ff; border: 1px solid #746484; border-radius: 24px; padding: 8px; spacing: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.logi-ring-item:hover, .logi-ring-item:focus { background: #7045a5; border-color: #d8b6ff; }
+.logi-ring-item:insensitive { color: #99939f; background: #292630; }
+.logi-ring-center { background: #48345e; color: #ffffff; border: 1px solid #ac87d4; border-radius: 49px; text-align: center; font-weight: bold; }
+.logi-ring-center:hover { background: #684783; }
