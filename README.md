@@ -6,7 +6,7 @@ A native Linux app bringing familiar Options+ controls to your desktop—startin
 with the MX Master 4. Adjust how your mouse feels, tune its scrolling, and explore
 haptic feedback from one place.
 
-![Options for Linux showing MX Master 4 button controls](docs/screenshots/mx-master-4.png)
+![Options for Linux showing MX Master 4 button controls](docs/screenshots/mx-master-4-window.png)
 
 *The native GTK app in our development setup. This screenshot uses locally
 extracted Logitech artwork and fonts; the public checkout uses fallback visuals
