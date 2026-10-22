@@ -25,6 +25,63 @@ class Device:
         index = self.feature(feature_id)['index']
         return self.transport.request(self.device_index, index, function, payload)[4:]
 
+    def fn_mode(self):
+        # 40A3 is host-specific; query the active host rather than assuming slot 0.
+        self.feature(0x40A3)
+        host = self.request(0x1815, 0)[3]
+        data = self.request(0x40A3, 0, bytes([host]))
+        if len(data) < 2 or data[0] != host or data[1] not in (0, 1):
+            raise ValueError('Invalid function-row response')
+        return dict(host=host, media_keys=bool(data[1]))
+
+    def set_fn_mode(self, media_keys):
+        current = self.fn_mode()
+        self.request(0x40A3, 1, bytes([current['host'], int(bool(media_keys))]))
+        actual = self.fn_mode()
+        if actual['host'] != current['host'] or actual['media_keys'] != bool(media_keys):
+            raise ValueError('Keyboard did not accept the function-row mode')
+        return actual
+
+    def backlight(self):
+        import struct
+        if self.feature(0x1982)['version'] != 3:
+            raise UnsupportedFeature('Backlight controls currently require version 3')
+        data = self.request(0x1982, 0)
+        if len(data) < 12:
+            raise ValueError('Truncated backlight response')
+        enabled, options, supported, effects, level, out, inside, powered = struct.unpack('<BBBHBHHH', data[:12])
+        count = self.request(0x1982, 2)[0]
+        if not 1 < count <= 256:
+            raise ValueError('Invalid backlight level range')
+        modes = [255]
+        if supported & 8: modes.append(1)
+        if supported & 32: modes.append(3)
+        if not supported & 56: modes.append(0)
+        return dict(enabled=bool(enabled), options=options, mode=(options >> 3) & 3,
+                    modes=modes, level=level, max_level=count - 1,
+                    hands_out=out * 5, hands_in=inside * 5, powered=powered * 5)
+
+    def set_backlight(self, mode, level, hands_out, hands_in, powered):
+        import struct
+        current = self.backlight()
+        if mode not in current['modes']:
+            raise ValueError('Unsupported backlight mode')
+        _integer(level, current['max_level'], 'backlight level')
+        times = [hands_out, hands_in, powered]
+        if any(type(t) is not int or not 5 <= t <= 600 or t % 5 for t in times):
+            raise ValueError('Backlight delays must be 5–600 seconds in steps of 5')
+        selected = current['mode'] if mode == 255 else mode
+        options = (current['options'] & 7) | (selected << 3)
+        payload = struct.pack('<BBBBHHH', int(mode != 255), options, 255,
+                              level if selected == 3 else 0, *(t // 5 for t in times))
+        self.request(0x1982, 1, payload)
+        actual = self.backlight()
+        if (actual['enabled'] != (mode != 255) or actual['mode'] != selected or
+                [actual[k] for k in ('hands_out', 'hands_in', 'powered')] != times or
+                (selected == 3 and actual['level'] != level)):
+            raise ValueError('Keyboard did not accept the backlight settings')
+        return actual
+
     def name(self):
         count = self.request(0x0005, 0)[0]
         chunks = bytearray()

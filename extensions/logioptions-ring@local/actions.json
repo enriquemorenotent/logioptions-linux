@@ -1,0 +1,198 @@
+{
+  "cut": [
+    "Cut",
+    "edit-cut-symbolic",
+    [
+      "Control_L",
+      "x"
+    ]
+  ],
+  "copy": [
+    "Copy",
+    "edit-copy-symbolic",
+    [
+      "Control_L",
+      "c"
+    ]
+  ],
+  "paste": [
+    "Paste",
+    "edit-paste-symbolic",
+    [
+      "Control_L",
+      "v"
+    ]
+  ],
+  "forward": [
+    "Forward",
+    "go-next-symbolic",
+    [
+      "Alt_L",
+      "Right"
+    ]
+  ],
+  "back": [
+    "Back",
+    "go-previous-symbolic",
+    [
+      "Alt_L",
+      "Left"
+    ]
+  ],
+  "undo": [
+    "Undo",
+    "edit-undo-symbolic",
+    [
+      "Control_L",
+      "z"
+    ]
+  ],
+  "redo": [
+    "Redo",
+    "edit-redo-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "z"
+    ]
+  ],
+  "none": [
+    "Unassigned",
+    "list-remove-symbolic",
+    null
+  ],
+  "save": [
+    "Save",
+    "document-save-symbolic",
+    [
+      "Control_L",
+      "s"
+    ]
+  ],
+  "save_as": [
+    "Save as",
+    "document-save-as-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "s"
+    ]
+  ],
+  "find": [
+    "Find",
+    "edit-find-symbolic",
+    [
+      "Control_L",
+      "f"
+    ]
+  ],
+  "select_all": [
+    "Select all",
+    "edit-select-all-symbolic",
+    [
+      "Control_L",
+      "a"
+    ]
+  ],
+  "new_tab": [
+    "New tab",
+    "tab-new-symbolic",
+    [
+      "Control_L",
+      "t"
+    ]
+  ],
+  "close_tab": [
+    "Close tab",
+    "window-close-symbolic",
+    [
+      "Control_L",
+      "w"
+    ]
+  ],
+  "reopen_tab": [
+    "Reopen tab",
+    "tab-new-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "t"
+    ]
+  ],
+  "next_tab": [
+    "Next tab",
+    "go-next-symbolic",
+    [
+      "Control_L",
+      "Tab"
+    ]
+  ],
+  "previous_tab": [
+    "Previous tab",
+    "go-previous-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "Tab"
+    ]
+  ],
+  "reload": [
+    "Reload",
+    "view-refresh-symbolic",
+    [
+      "Control_L",
+      "r"
+    ]
+  ],
+  "zoom_in": [
+    "Zoom in",
+    "zoom-in-symbolic",
+    [
+      "Control_L",
+      "plus"
+    ]
+  ],
+  "zoom_out": [
+    "Zoom out",
+    "zoom-out-symbolic",
+    [
+      "Control_L",
+      "minus"
+    ]
+  ],
+  "zoom_reset": [
+    "Reset zoom",
+    "zoom-original-symbolic",
+    [
+      "Control_L",
+      "0"
+    ]
+  ],
+  "command_palette": [
+    "Command palette",
+    "system-run-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "p"
+    ]
+  ],
+  "terminal_copy": [
+    "Terminal copy",
+    "edit-copy-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "c"
+    ]
+  ],
+  "terminal_paste": [
+    "Terminal paste",
+    "edit-paste-symbolic",
+    [
+      "Control_L",
+      "Shift_L",
+      "v"
+    ]
+  ]
+}

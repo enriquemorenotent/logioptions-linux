@@ -52,7 +52,8 @@ def snapshot(device, path):
                   key=f'{path}:{device.device_index}', read_errors=[])
     for name, reader in [('kind_code', device.kind_code), ('battery', device.battery_status),
                          ('dpi', device.dpi), ('smartshift', device.smartshift),
-                         ('controls', device.controls), ('haptics', device.haptic_config)]:
+                         ('controls', device.controls), ('haptics', device.haptic_config),
+                         ('fn_mode', device.fn_mode), ('backlight', device.backlight)]:
         try:
             result[name] = reader()
         except UnsupportedFeature:
@@ -78,22 +79,32 @@ def discover():
     for interface in interfaces():
         try:
             with LinuxHidppTransport(interface['path']) as transport:
-                for index in interface['indices']:
-                    identified = False
-                    try:
-                        feature = transport.lookup_feature(index, 0x0005, timeout=0.25)
-                        if not feature['index']:
-                            continue
-                        identified = True
-                        device = Device(transport, index)
-                        device.features[0x0005] = feature
-                        devices.append(snapshot(device, interface['path']))
-                    except (TimeoutError, HidppError) as error:
-                        # An absent slot is expected. A device that answered its
-                        # identity lookup but failed inspection should be reported.
-                        if identified:
-                            errors.append(f"{interface['path']} slot {index}: {error}")
-                        continue
+                pending = list(interface['indices'])
+                failures = {}
+                # Wireless devices can take longer to answer while waking.
+                # Retry only missing slots after the fast first pass; retain
+                # already discovered devices without duplicating or rereading.
+                for timeout in (0.25, 1.0):
+                    retry = []
+                    for index in pending:
+                        identified = False
+                        try:
+                            feature = transport.lookup_feature(index, 0x0005, timeout=timeout)
+                            if not feature['index']:
+                                continue
+                            identified = True
+                            device = Device(transport, index)
+                            device.features[0x0005] = feature
+                            devices.append(snapshot(device, interface['path']))
+                            failures.pop(index, None)
+                        except (TimeoutError, HidppError) as error:
+                            retry.append(index)
+                            if identified:
+                                failures[index] = f"{interface['path']} slot {index}: {error}"
+                    pending = retry
+                    if not pending:
+                        break
+                errors.extend(failures.values())
         except OSError as error:
             errors.append(str(error))
     return devices, errors

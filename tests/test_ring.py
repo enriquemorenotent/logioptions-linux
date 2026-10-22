@@ -50,3 +50,44 @@ class RingTests(unittest.TestCase):
         self.assertFalse(listener.thread.is_alive())
         self.assertEqual(Device.instances[-1].state['flags'], 0)
         self.assertIn('shell unavailable', errors[-1])
+
+    def test_mouse_reset_is_rearmed_without_restarting_listener(self):
+        recovered = threading.Event()
+        class ResetDevice(Device):
+            def control_reporting(self, cid):
+                if len(self.writes) == 1 and not hasattr(self, 'reset_once'):
+                    # Initial verification succeeds; the next read simulates
+                    # reporting lost while the same receiver remains open.
+                    self.reset_once = False
+                elif getattr(self, 'reset_once', None) is False:
+                    self.state['flags'] = 0
+                    self.reset_once = True
+                return dict(self.state)
+        listener = RingListener({'path':'fake', 'device_index':2},
+            lambda message: recovered.set() if 'recovered' in message else None,
+            transport_factory=Transport, device_factory=ResetDevice,
+            call=lambda method: None, health_interval=.01)
+        try:
+            self.assertTrue(recovered.wait(2))
+            self.assertTrue(listener.thread.is_alive())
+            self.assertEqual(ResetDevice.instances[-1].state['flags'], 1)
+        finally:
+            listener.stop()
+        self.assertEqual(ResetDevice.instances[-1].state['flags'], 0)
+
+    def test_health_read_failure_exits_for_service_rediscovery(self):
+        class DisconnectedDevice(Device):
+            reads = 0
+            def control_reporting(self, cid):
+                self.reads += 1
+                if self.reads == 3:
+                    raise TimeoutError('mouse disconnected')
+                return dict(self.state)
+        errors = []
+        listener = RingListener({'path':'fake', 'device_index':2}, errors.append,
+            transport_factory=Transport, device_factory=DisconnectedDevice,
+            call=lambda method: None, health_interval=.01)
+        listener.thread.join(2)
+        self.assertFalse(listener.thread.is_alive())
+        self.assertIn('mouse disconnected', errors[-1])
+        self.assertEqual(DisconnectedDevice.instances[-1].state['flags'], 0)

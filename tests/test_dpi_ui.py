@@ -141,3 +141,75 @@ class DpiSliderTests(unittest.TestCase):
         finally:
             window.on_close()
             window.destroy()
+
+    def test_keyboard_controls_apply_and_render(self):
+        from unittest.mock import Mock
+        with patch.object(OptionsWindow, 'refresh'):
+            window = OptionsWindow(self.app)
+        try:
+            light = dict(enabled=False, mode=1, modes=[255,1,3], options=13,
+                level=0, max_level=7, hands_out=5, hands_in=10, powered=60)
+            window.devices = [dict(key='test:1', name='MX Keys for Business', kind_code=0,
+                fn_mode=dict(host=0, media_keys=False), backlight=light)]
+            window.render_device()
+            self.assertIs(window.cards['Function keys'].get_parent(), window.panel)
+            self.assertIs(window.cards['Keyboard backlight'].get_parent(), window.panel)
+            def descendants(widget):
+                yield widget
+                child = widget.get_first_child()
+                while child:
+                    yield from descendants(child)
+                    child = child.get_next_sibling()
+            device = Mock()
+            device.set_fn_mode.return_value = dict(host=0, media_keys=True)
+            device.set_backlight.return_value = light
+            window.action = lambda work, success: work(device)
+            window.show_panel('Function keys')
+            widgets = list(descendants(window.panel))
+            next(w for w in widgets if isinstance(w,Gtk.DropDown)).set_selected(1)
+            next(w for w in widgets if isinstance(w,Gtk.Button) and w.get_label() == 'Apply function-key mode').emit('clicked')
+            device.set_fn_mode.assert_called_once_with(True)
+            window.show_panel('Keyboard backlight')
+            widgets = list(descendants(window.panel))
+            mode = next(w for w in widgets if isinstance(w,Gtk.DropDown))
+            scale = next(w for w in widgets if isinstance(w,Gtk.Scale))
+            self.assertFalse(scale.get_visible())
+            mode.set_selected(2)
+            self.assertTrue(scale.get_visible())
+            scale.set_value(3)
+            next(w for w in widgets if isinstance(w,Gtk.Button) and w.get_label() == 'Apply backlight').emit('clicked')
+            device.set_backlight.assert_called_once_with(3,3,5,10,60)
+        finally:
+            window.on_close()
+            window.destroy()
+
+    def test_navigation_follows_device_and_keyboard_section(self):
+        with patch.object(OptionsWindow, 'refresh'):
+            window = OptionsWindow(self.app)
+        try:
+            window.devices = [dict(key='keyboard', name='MX Keys', kind_code=0),
+                              dict(key='mouse', name='MX Master 4', kind_code=3)]
+            window.open_device(0)
+            visible = lambda: {k for k,b in window.nav_buttons.items() if b.get_visible()}
+            self.assertFalse(window.navigation.get_visible())
+            self.assertEqual(window.section, 'keyboard')
+            self.assertFalse(window.global_button.get_visible())
+            image = window.device_picture
+            self.assertEqual(len(window.callouts), 0)
+            self.assertFalse(window.drawer_close.get_visible())
+            self.assertTrue(window.drawer.get_visible())
+            self.assertEqual(window.panel_title, 'Keyboard settings')
+            for title in ('Function keys', 'Keyboard backlight'):
+                window.show_panel(title)
+                self.assertFalse(window.navigation.get_visible())
+                window.close_panel()
+                self.assertFalse(window.navigation.get_visible())
+            self.assertIs(window.device_picture, image)
+            window.open_device(1)
+            self.assertEqual(visible(), {'buttons','point','haptics','easy','flow','settings'})
+            self.assertEqual(window.section, 'buttons')
+            window.open_device(0)
+            self.assertFalse(window.navigation.get_visible())
+        finally:
+            window.on_close()
+            window.destroy()

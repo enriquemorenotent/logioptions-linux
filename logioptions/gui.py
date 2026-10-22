@@ -11,7 +11,8 @@ from gi.repository import Adw, Gdk, GLib, Gtk
 
 from .device import Device
 from .events import capture_control
-from .ring import RingListener, available as ring_available, shell_call
+from .ring import available as ring_available, shell_call
+from .background import foreground_access
 from .discovery import discover
 from .hidpp import LinuxHidppTransport
 
@@ -38,7 +39,6 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         super().__init__(application=app, title='Options for Linux', default_width=1280, default_height=820)
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.closed = False
-        self.ring = None
         self.ring_ready = ring_available()
         self.busy = False
         self.devices = []
@@ -50,9 +50,6 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
     def on_close(self, *_):
         self.closed = True
         self.pool.shutdown(wait=False, cancel_futures=True)
-        if self.ring:
-            self.ring.stop()
-            self.ring = None
         return False
 
     def run(self, work, done, status):
@@ -65,10 +62,8 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         self.refresh_button.set_sensitive(False)
         self.device_list.set_sensitive(False)
         def exclusive_work():
-            if self.ring:
-                self.ring.stop()
-                self.ring = None
-            return work()
+            with foreground_access():
+                return work()
         future = self.pool.submit(exclusive_work)
         def finish():
             if self.closed:
@@ -82,23 +77,20 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 done(future.result())
             except Exception as error:
                 self.status.set_text(str(error))
-            self.start_ring()
             return False
         future.add_done_callback(lambda _: GLib.idle_add(finish))
 
-    def start_ring(self):
-        if self.closed or self.ring or not self.ring_ready:
-            return
-        mouse = next((d for d in self.devices if any(c['control_id'] == 416
-                     and c['flags'] & 0x20 for c in d.get('controls', []))), None)
-        if mouse:
-            def status(message):
-                def update():
-                    if not self.closed:
-                        self.status.set_text(message)
-                    return False
-                GLib.idle_add(update)
-            self.ring = RingListener(mouse, status)
+    def show_ring_profiles(self):
+        from .profile_ui import ProfileWindow
+        try:
+            window = getattr(self, 'profile_window', None)
+            if window is None:
+                window = ProfileWindow(self)
+                self.profile_window = window
+                window.connect('destroy', lambda *_: setattr(self, 'profile_window', None))
+            window.present()
+        except (ValueError, OSError) as error:
+            self.status.set_text(f'Cannot open ring profiles: {error}')
 
     def refresh(self):
         self.run(discover, self.got_devices, 'Reading connected devices…')
@@ -247,9 +239,10 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         controls = device.get('controls', [])
         if any(c['control_id'] == 416 and c['flags'] & 0x20 for c in controls):
             card = self.card('Thumb pad')
+            card.append(self.button('Configure per-app ring', self.show_ring_profiles, True))
             if self.ring_ready:
                 card.append(label('Press the thumb pad to open Actions Ring.', 'muted'))
-                card.append(label('Keep this app open. Choose an action, or press Escape to cancel.', 'muted'))
+                card.append(label('Runs in the background. Choose an action, or press Escape to cancel.', 'muted'))
                 card.append(self.button('Preview Actions Ring', lambda: shell_call('Show')))
             else:
                 installed = (Path.home() / '.local/share/gnome-shell/extensions/logioptions-ring@local/metadata.json').exists()
@@ -306,10 +299,58 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                     next(c for c in sources if c['control_id'] == cid)['reporting'] = actual
                 self.action(apply, 'Button action updated')
             card.append(self.button('Apply button action', apply_mapping))
-        if device.get('kind_code') == 0:
-            card = self.card('Keyboard')
-            card.append(label('Battery and device connection are available.'))
-            card.append(label('Keyboard customization is still being rebuilt.', 'muted'))
+        if 'fn_mode' in device:
+            card = self.card('Function keys')
+            choice = Gtk.DropDown.new_from_strings(['F1–F12 keys', 'Media and brightness keys'])
+            choice.set_selected(int(device['fn_mode']['media_keys']))
+            card.append(label('Choose what the top row does without holding Fn.', 'muted'))
+            card.append(choice)
+            def apply_fn():
+                media = choice.get_selected() == 1
+                def apply(d):
+                    device['fn_mode'] = d.set_fn_mode(media)
+                self.action(apply, 'Function-key mode updated')
+            card.append(self.button('Apply function-key mode', apply_fn, True))
+        if 'backlight' in device:
+            current = device['backlight']
+            card = self.card('Keyboard backlight')
+            names = {255: 'Off', 0: 'On', 1: 'Automatic', 3: 'Manual'}
+            modes = current['modes']
+            mode = Gtk.DropDown.new_from_strings([names[m] for m in modes])
+            selected = current['mode'] if current['enabled'] else 255
+            mode.set_selected(modes.index(selected) if selected in modes else 0)
+            card.append(label('Backlight mode'))
+            card.append(mode)
+            level = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, current['max_level'], 1)
+            level.set_digits(0)
+            level.set_value(current['level'])
+            brightness_label = label('Brightness', 'muted')
+            card.append(brightness_label)
+            card.append(level)
+            def show_brightness(*_):
+                manual = modes[mode.get_selected()] == 3
+                brightness_label.set_visible(manual)
+                level.set_visible(manual)
+            mode.connect('notify::selected', show_brightness)
+            show_brightness()
+            timers = {}
+            for key, title in [('hands_out', 'Hands away'), ('hands_in', 'Hands nearby'), ('powered', 'While charging')]:
+                row = box(False)
+                row.append(label(title + ' · seconds'))
+                spin = Gtk.SpinButton.new_with_range(5, 600, 5)
+                spin.set_value(current[key])
+                spin.set_snap_to_ticks(True)
+                row.append(spin)
+                card.append(row)
+                timers[key] = spin
+            def apply_backlight():
+                values = [int(timers[k].get_value()) for k in ('hands_out', 'hands_in', 'powered')]
+                chosen, strength = modes[mode.get_selected()], int(level.get_value())
+                def apply(d):
+                    device['backlight'] = d.set_backlight(chosen, strength, *values)
+                self.action(apply, 'Keyboard backlight updated')
+            card.append(self.button('Apply backlight', apply_backlight, True))
+
 
 
 class OptionsApp(Adw.Application):

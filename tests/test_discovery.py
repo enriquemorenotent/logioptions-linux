@@ -1,7 +1,7 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from logioptions.discovery import snapshot
+from logioptions.discovery import snapshot, discover
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -21,3 +21,24 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(len(actual['read_errors']), 2)
         self.assertNotIn('smartshift', actual)
         self.assertNotIn('dpi_limits', actual)
+
+    def test_slow_keyboard_retried_without_duplicate_mouse(self):
+        transport = Mock()
+        def lookup(index, feature, timeout):
+            if index == 1 and timeout == .25:
+                raise TimeoutError('keyboard waking')
+            if index == 3:
+                raise TimeoutError('empty slot')
+            return {'index': 5}
+        transport.lookup_feature.side_effect = lookup
+        def descriptor(device, path):
+            return {'name': 'keyboard' if device.device_index == 1 else 'mouse'}
+        with patch('logioptions.discovery.interfaces', return_value=[{'path':'fake','indices':[1,2,3]}]), \
+             patch('logioptions.discovery.LinuxHidppTransport') as factory, \
+             patch('logioptions.discovery.snapshot', side_effect=descriptor):
+            factory.return_value.__enter__.return_value = transport
+            devices, errors = discover()
+        self.assertEqual(devices, [{'name':'mouse'}, {'name':'keyboard'}])
+        self.assertEqual(errors, [])
+        self.assertEqual([(c.args[0], c.kwargs['timeout']) for c in transport.lookup_feature.call_args_list],
+                         [(1,.25),(2,.25),(3,.25),(1,1.0),(3,1.0)])

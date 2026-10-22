@@ -7,7 +7,7 @@ from gi.repository import Gio
 source = Path(__file__).resolve().parents[1] / 'extensions/logioptions-ring@local'
 target = Path.home() / '.local/share/gnome-shell/extensions' / source.name
 target.mkdir(parents=True, exist_ok=True)
-for name in ('metadata.json', 'extension.js', 'stylesheet.css'):
+for name in ('metadata.json', 'extension.js', 'stylesheet.css', 'profiles.js', 'actions.json'):
     shutil.copy2(source / name, target / name)
 settings = Gio.Settings.new('org.gnome.shell')
 enabled = list(settings.get_strv('enabled-extensions'))
@@ -26,3 +26,7 @@ project = str(source.parents[1])
     'Comment=Logitech device controls and Actions Ring\n'
     f'Path={project}\nExec=/usr/bin/python3 -m logioptions gui\n'
     'Icon=input-mouse\nTerminal=false\nCategories=Settings;HardwareSettings;\n')
+
+# The listener runs independently of the settings window.
+import subprocess
+subprocess.run(['/usr/bin/python3', str(source.parents[1] / 'scripts/install_background.py')], check=True)

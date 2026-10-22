@@ -13,7 +13,7 @@ Hardware available: MX Master 4 and MX Keys for Business. Evidence is local unde
 | Haptics | Seven native command builders, configuration UI, explicit test pulse | Original native machine-code differential; user confirmed Linux waveform 7 and clearly stronger 90% versus 10% preview |
 | Button events, gestures, force sensing, Actions Ring | Native press/release decoder, persistent listener, GNOME 50 ring and seven Linux shortcuts | Thumb-pad capture verified physically; ring render and Ctrl+C delivery verified in isolated GNOME. Current desktop activation needs logout/login; customization and full parity unfinished |
 | Application profiles | Official profile APIs recovered | Linux profile engine unfinished |
-| Keyboard customization, backlight, Fn | Identity, features, battery | Keyboard inspected; customization unfinished |
+| Keyboard customization, backlight, Fn | Host-specific Fn mode; backlight mode, level and three timers for 0x1982 v3 | MX Keys for Business read/write/restore verified; see [keyboard controls](KEYBOARD-CONTROLS.md). Reconnect persistence and other keyboard customization unfinished |
 | Smart Actions, macros, scheduling | Research only | Unfinished |
 | Flow, clipboard and file transfer | Research only | Unfinished |
 | Pairing and host switching | Research only | Unfinished |

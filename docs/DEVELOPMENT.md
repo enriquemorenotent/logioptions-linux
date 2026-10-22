@@ -37,10 +37,11 @@ strength, verifies the mouse's response, then plays one pulse. A physical
 
 Actions Ring on GNOME 50: install the extension with
 `/usr/bin/python3 scripts/install_ring.py`, then log out and back in. Launch this
-app and keep it open. Tap the thumb pad, then click an action; Escape dismisses
+app to adjust settings. The ring listener starts automatically at login and keeps running when the window closes. Tap the thumb pad, then click an action; Escape dismisses
 it. Holding the pad, moving onto an action, then releasing also selects it.
 The eight captured default slots are reproduced, with an empty folder disabled.
-Custom menus, analog controls and app-specific ring profiles are not implemented.
+Per-app ring profiles support eight slots chosen from the shortcut action library.
+Custom shortcuts, submenus and analog controls are not implemented.
 See [the ring evidence and checks](../research/ACTIONS-RING.md).
 
 See [the implementation review](../research/REVIEW-2026-10-20.md) for corrections,
@@ -92,3 +93,22 @@ no packaged release or automatic device-permission setup.
 The native UI now follows the observed Options+ 2.9 device pages. See
 [UI reference and verification](../research/UI-REFERENCE.md) for screenshots,
 local asset provenance, and remaining visual/feature differences.
+
+To enable background listening on an existing extension installation, run
+`/usr/bin/python3 scripts/install_background.py`. No further logout is needed.
+The checkout must stay at its installed path. To disable background listening:
+`systemctl --user disable --now logioptions-ring.service`.
+
+Configure ring profiles using the grid button in the app header, or
+**Show Actions Ring → Configure per-app ring**. Choose an application and assign
+its eight actions. **All apps** is the fallback; **Use All apps** removes an override.
+Changes are saved when switching applications or closing the editor, as well as
+with **Save profile**. The extension reads the profile at each ring opening and
+keeps that choice until the ring closes. The destination window must still be
+focused before any shortcut is sent.
+
+Profiles live in `$XDG_CONFIG_HOME/logioptions/ring-profiles.json` (normally
+`~/.config/logioptions/ring-profiles.json`). Application matching uses GNOME's
+desktop application ID, with a WM_CLASS fallback for unmatched running windows.
+After upgrading the extension, log out and back in once to load the new code.
+Subsequent profile edits take effect without restarting anything.

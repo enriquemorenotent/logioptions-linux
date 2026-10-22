@@ -131,9 +131,9 @@ class Presentation:
         self.heading = text('Good Evening', 'header-title')
         self.heading.set_hexpand(True)
         header.append(self.heading)
-        self.global_button = Gtk.Button(icon_name='view-grid-symbolic', tooltip_text='Global settings')
+        self.global_button = Gtk.Button(icon_name='view-grid-symbolic', tooltip_text='Actions Ring profiles')
         self.global_button.add_css_class('flat-icon')
-        self.global_button.connect('clicked', lambda *_: self.show_section('buttons'))
+        self.global_button.connect('clicked', lambda *_: self.show_ring_profiles())
         header.append(self.global_button)
         self.refresh_button = Gtk.Button(icon_name='view-refresh-symbolic', tooltip_text='Refresh devices')
         self.refresh_button.add_css_class('flat-icon')
@@ -158,7 +158,7 @@ class Presentation:
             button = Gtk.Button(halign=Gtk.Align.START)
             content = row(14)
             glyphs = {'buttons':'\ue926', 'point':'\ue976', 'haptics':'\ue9bb', 'easy':'\ue949', 'flow':'\ue94e', 'settings':'\ue960'}
-            if (ROOT / 'artifacts/mac-live-2.9/ui/assets/120228c0ffbb15c5d091.ttf').exists():
+            if key in glyphs and (ROOT / 'artifacts/mac-live-2.9/ui/assets/120228c0ffbb15c5d091.ttf').exists():
                 content.append(text(glyphs[key], 'reference-icon'))
             else:
                 content.append(Gtk.Image.new_from_icon_name(icon))
@@ -178,9 +178,11 @@ class Presentation:
         drawer_head = row()
         drawer_head.add_css_class('drawer-header')
         title = text('Modify settings')
+        self.drawer_title = title
         title.set_hexpand(True)
         drawer_head.append(title)
         close = Gtk.Button(icon_name='window-close-symbolic', tooltip_text='Close settings')
+        self.drawer_close = close
         close.add_css_class('flat-icon')
         close.connect('clicked', lambda *_: self.close_panel())
         drawer_head.append(close)
@@ -213,7 +215,7 @@ class Presentation:
         self.global_button.set_visible(False)
 
     def go_back(self):
-        if self.drawer.get_visible(): self.close_panel()
+        if self.drawer.get_visible() and self.panel_title != 'Keyboard settings': self.close_panel()
         else: self.show_home()
 
     def show_home(self):
@@ -261,14 +263,23 @@ class Presentation:
     def close_panel(self):
         while self.panel.get_first_child(): self.panel.remove(self.panel.get_first_child())
         self.drawer.set_visible(False)
-        self.navigation.set_visible(not self.home)
+        device = self.devices[self.selected] if self.devices else {}
+        self.navigation.set_visible(not self.home and (device.get('kind_code') == 3 or 'dpi' in device))
         for button in getattr(self, 'callouts', []): button.remove_css_class('selected')
 
     def show_panel(self, title, anchor=None):
         self.close_panel()
         self.panel_title = title
+        self.drawer_title.set_text('Keyboard settings' if title == 'Keyboard settings' else 'Modify settings')
+        self.drawer_close.set_visible(title != 'Keyboard settings')
         card = self.cards.get(title)
-        if card:
+        if title == 'Keyboard settings':
+            for name in ('Function keys', 'Keyboard backlight'):
+                section = self.cards.get(name)
+                if section:
+                    if section.get_parent(): section.get_parent().remove(section)
+                    self.panel.append(section)
+        elif card:
             if card.get_parent(): card.get_parent().remove(card)
             self.panel.append(card)
         else:
@@ -288,6 +299,12 @@ class Presentation:
         self.home = False
         self.close_panel()
         device = self.devices[self.selected]
+        mouse = device.get('kind_code') == 3 or 'dpi' in device
+        sections = ('buttons', 'point', 'haptics', 'easy', 'flow', 'settings') if mouse else ('keyboard',)
+        if self.section not in sections:
+            self.section = sections[0]
+        for key, button in self.nav_buttons.items():
+            button.set_visible(key in sections)
         canvas_key = device.get('key', device['name'])
         reuse_canvas = (getattr(self, '_canvas_key', None) == canvas_key
                         and getattr(self, 'canvas', None) is not None
@@ -310,8 +327,8 @@ class Presentation:
         device = self.devices[self.selected]
         self.heading.set_text(device['name'])
         self.back.set_visible(True)
-        self.global_button.set_visible(self.section not in ('haptics', 'settings'))
-        self.navigation.set_visible(True)
+        self.global_button.set_visible(mouse and self.section not in ('haptics', 'settings'))
+        self.navigation.set_visible(mouse)
         for key, button in self.nav_buttons.items():
             if key == self.section: button.add_css_class('active')
             else: button.remove_css_class('active')
@@ -333,7 +350,7 @@ class Presentation:
         if self.overlay_picture:
             self.overlay_picture.set_visible(self.section == 'haptics')
         if not mouse:
-            self.add_callout('Keyboard', 'Battery and connection', 'Keyboard', -.2, .55)
+            pass  # Keyboard controls are always visible in the adjacent panel.
         elif self.section == 'buttons':
             for title, card, x, y, cid in [
                 ('Middle button','Button actions',.91,.18,82), ('Gesture button','Button actions',-.29,.35,195),
@@ -353,6 +370,8 @@ class Presentation:
         else:
             title = {'easy':'Easy-Switch', 'flow':'Flow', 'settings':'Device settings'}[self.section]
             self.add_callout(title, 'Click to view', title, -.35,.48)
+        if not mouse:
+            self.show_panel('Keyboard settings')
         self._last_size = None
         if reuse_canvas:
             self.layout_canvas(self.canvas, None)

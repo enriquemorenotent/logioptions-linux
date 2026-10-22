@@ -4,24 +4,20 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Shell from 'gi://Shell';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {selectProfile} from './profiles.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const XML = `<node><interface name="local.logioptions.Ring">
+<method name="ProfileVersion"><arg type="u" direction="out"/></method>
+<method name="ListApplications"><arg type="s" direction="out"/></method>
 <method name="Show"/><method name="Release"/><method name="Hide"/>
 <method name="Ping"><arg type="s" direction="out"/></method>
 </interface></node>`;
-// Assignments recovered from Options+ 2.9's virtual device, CIDs 408–415.
-// The angular layout is our own; Mac Command is translated to Linux Control.
-const ITEMS = [
-    ['Cut', 'edit-cut-symbolic', ['Control_L', 'x']],
-    ['Copy', 'edit-copy-symbolic', ['Control_L', 'c']],
-    ['Paste', 'edit-paste-symbolic', ['Control_L', 'v']],
-    ['Forward', 'go-next-symbolic', ['Alt_L', 'Right']],
-    ['Back', 'go-previous-symbolic', ['Alt_L', 'Left']],
-    ['Undo', 'edit-undo-symbolic', ['Control_L', 'z']],
-    ['Redo', 'edit-redo-symbolic', ['Control_L', 'Shift_L', 'z']],
-    ['Empty folder', 'folder-symbolic', null],
-];
+function readJSON(path) {
+    const [ok, bytes] = GLib.file_get_contents(path);
+    if (!ok) throw new Error('Unable to read ring profiles');
+    return JSON.parse(new TextDecoder().decode(bytes));
+}
 
 export default class ActionsRing extends Extension {
     enable() {
@@ -33,11 +29,35 @@ export default class ActionsRing extends Extension {
         this._session = Main.sessionMode.connect('updated', () => this.Hide());
     }
     Ping() { return 'ready'; }
+    ProfileVersion() { return 1; }
+    ListApplications() {
+        const tracker = Shell.WindowTracker.get_default();
+        const apps = new Map();
+        for (const actor of global.get_window_actors()) {
+            const window = actor.meta_window;
+            const app = tracker.get_window_app(window);
+            const wm = window.get_wm_class();
+            const id = app?.get_id() || (wm ? `wmclass:${wm}` : null);
+            if (id) apps.set(id, {id, name: app?.get_name() || wm});
+        }
+        return JSON.stringify([...apps.values()]);
+    }
+    _profile(window) {
+        const catalog = readJSON(`${this.path}/actions.json`);
+        let config = null;
+        try { config = readJSON(GLib.build_filenamev([GLib.get_user_config_dir(), 'logioptions', 'ring-profiles.json'])); }
+        catch (error) { /* Missing or malformed config safely uses the default. */ }
+        const app = window ? Shell.WindowTracker.get_default().get_window_app(window) : null;
+        const profile = selectProfile(config, app?.get_id(), window?.get_wm_class(), catalog);
+        return {name: profile.name, items: profile.slots.map(id => catalog[id])};
+    }
     Show() {
         if (Main.sessionMode.isLocked || Main.sessionMode.isGreeter)
             return;
         if (this._overlay) { this.Hide(); return; }
         this._target = global.display.focus_window;
+        const profile = this._profile(this._target);
+        this._items = profile.items;
         const [px, py] = global.get_pointer();
         this._origin = [px, py];
         const monitor = Main.layoutManager.findMonitorForPoint(px, py) ?? Main.layoutManager.primaryMonitor;
@@ -55,11 +75,11 @@ export default class ActionsRing extends Extension {
             if (event.get_source() === this._overlay) this.Hide();
             return Clutter.EVENT_PROPAGATE;
         });
-        const center = new St.Button({label: 'Actions\n×', x: cx - 49, y: cy - 49,
+        const center = new St.Button({label: `${profile.name.slice(0, 16)}\n×`, x: cx - 49, y: cy - 49,
             width: 98, height: 98, style_class: 'logi-ring-center', can_focus: true});
         center.connect('clicked', () => this.Hide());
         this._overlay.add_child(center);
-        this._buttons = ITEMS.map(([label, icon, keys], i) => {
+        this._buttons = this._items.map(([label, icon, keys], i) => {
             const angle = -Math.PI / 2 + i * Math.PI / 4;
             const button = new St.Button({x: cx + Math.cos(angle) * radius - 53,
                 y: cy + Math.sin(angle) * radius - 40, width: 106, height: 80,
@@ -86,7 +106,7 @@ export default class ActionsRing extends Extension {
         // A short tap leaves the ring open for a subsequent click.
     }
     _activate(index) {
-        const keys = ITEMS[index]?.[2];
+        const keys = this._items?.[index]?.[2];
         if (!keys) return;
         const target = this._target;
         this.Hide();

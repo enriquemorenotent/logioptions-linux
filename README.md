@@ -18,8 +18,11 @@ without those assets.*
 - **Scrolling:** control wheel mode and SmartShift.
 - **Buttons:** inspect and change supported button mappings.
 - **Haptics:** adjust vibration strength and feel a preview.
+- **Keyboard:** choose F1–F12 or media keys, and adjust MX Keys for Business backlighting.
 - **Device status:** see your connected devices and battery levels.
-- **Actions Ring:** an experimental GNOME extension for shortcuts at your thumb.
+- **Actions Ring:** an experimental GNOME extension for shortcuts at your thumb,
+  with a background listener that starts at login—even with the app closed.
+- **Per-app rings:** choose eight actions for each app, with an All apps fallback.
 
 ## Built from real devices
 
@@ -28,14 +31,14 @@ original Options+ app. Its controls are built from observed application behavior
 reverse engineering, and direct device communication.
 
 Mouse controls and haptic intensity have been tested on an MX Master 4 over Bolt.
-MX Keys for Business discovery and battery readings also work. The Actions Ring
+MX Keys for Business also supports battery readings, function-key mode, and backlight controls. The Actions Ring
 has passed isolated desktop checks; testing it in the everyday desktop session
 is still pending.
 
 ## Try the early build
 
 **This is a working experiment, not yet a complete Options+ replacement.**
-Profiles, Flow, macros, keyboard customization, and full Actions Ring parity are
+Broader device profiles, Flow, macros, keyboard customization, and full Actions Ring parity are
 still unfinished.
 
 Development currently targets Ubuntu 26.04, with GNOME 50 for the Actions Ring.

@@ -30,12 +30,14 @@ focus; shortcuts are sent only if the original window is still focused and the
 session is unlocked. Virtual keyboard events stay inside that compositor.
 There is no privileged service or uinput requirement.
 
-`RingListener` owns the receiver while the app is idle. Before device settings
-or refresh, the GUI stops and joins the listener and verifies thumb-pad reporting
-restoration. It restarts afterwards. Closing the app restores reporting. Thus the
-first implementation requires the app to remain open, and temporarily pauses
-ring input during settings operations. Device disconnects are reported; refresh
-is needed to retry. Abrupt process termination or disconnect can prevent cleanup.
+The user service `logioptions-ring.service` now owns `RingListener`, independent
+of the settings window. It starts with the graphical session and stops on logout.
+The GUI holds a foreground request and waits for the background device lease;
+the service stops and joins its listener, restoring thumb-pad reporting, before
+releasing that lease. It resumes after the operation, including failed operations.
+The service retries when GNOME or the mouse is unavailable, or its reader exits.
+Closing the settings window does not stop background listening. No root service
+or additional device permissions are installed.
 
 Installation adds only this local extension and its enabled preference. GNOME 50's
 installed `shellDBus.js` explicitly rejects ReloadExtension as deprecated;
@@ -68,3 +70,31 @@ the new ring; the before/repair record is
 XDG directories to the bus daemon itself. A repeat passed and left the restored
 real enabled-extension list unchanged. No extension source besides this project
 was changed.
+
+### Background service validation, 2026-10-21
+
+The extension reports ACTIVE and its session-bus Ping returns ready after login.
+The user service is enabled on graphical-session.target. On the real receiver,
+opening the settings app releases the listener for discovery and the service
+reports ready again afterward. Closing the app leaves the service holding the
+HID interface with its actions-ring thread alive. Automated tests cover the
+foreground handoff, missing shell/device retries, and dead-listener recovery;
+the four isolated GTK checks pass. Physical thumb-pad acceptance remains a user
+check; this does not claim a future login has already been tested.
+
+### Per-application rings, 2026-10-21
+
+The native editor stores eight action IDs per desktop application plus a default
+layout, using validated atomic JSON replacement. The shell resolves the focused
+window before taking a modal grab, prefers Shell.WindowTracker desktop IDs, and
+falls back to an exact WM_CLASS key. The selected action list is frozen for each
+open ring. Missing, malformed, or invalid profiles fall back safely. Shortcuts
+remain constrained to the original focused window. No arbitrary commands execute.
+
+The isolated GNOME check verifies default Ctrl+C delivery, an actual window's
+application-specific Ctrl+S delivery, override removal, and malformed-file fallback.
+Pure selection tests cover distinct app IDs, WM_CLASS fallback, invalid slots, and
+unknown config versions. GTK tests exercise editing, saving, switching, and removal.
+The current desktop requires one logout/login to load extension version 2; profile
+edits thereafter are read on each ring opening. Background operation was physically
+confirmed by the user before this change.

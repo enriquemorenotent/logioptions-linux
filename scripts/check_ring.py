@@ -5,6 +5,7 @@ No mouse device, real desktop extension, or system input injection is used.
 Test-only D-Bus methods are added only to the temporary extension copy.
 """
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -42,11 +43,11 @@ def inside(work, output):
     from gi.repository import Gio, GLib
     extension = work / 'data/gnome-shell/extensions' / UUID
     extension.mkdir(parents=True)
-    for name in ('metadata.json', 'extension.js', 'stylesheet.css'):
+    for name in ('metadata.json', 'extension.js', 'stylesheet.css', 'profiles.js', 'actions.json'):
         shutil.copy2(ROOT / 'extensions' / UUID / name, extension / name)
     source = (extension / 'extension.js').read_text()
-    source = source.replace('<method name="Ping">', '<method name="TestFocus"><arg type="b" direction="out"/></method><method name="TestActivate"><arg type="u" direction="in"/></method><method name="Ping">')
-    source = source.replace("    Ping() {", "    TestFocus() { const actor = global.get_window_actors().find(a => a.meta_window.title === 'Ring test target'); if (!actor) return false; actor.meta_window.activate(global.get_current_time()); return true; }\n    TestActivate(index) { this._activate(index); }\n    Ping() {")
+    source = source.replace('<method name="Ping">', '<method name="TestProfile"><arg type="s" direction="out"/></method><method name="TestFocus"><arg type="b" direction="out"/></method><method name="TestActivate"><arg type="u" direction="in"/></method><method name="Ping">')
+    source = source.replace("    Ping() {", "    TestProfile() { return JSON.stringify(this._profile(global.display.focus_window)); }\n    TestFocus() { const actor = global.get_window_actors().find(a => a.meta_window.title === 'Ring test target'); if (!actor) return false; actor.meta_window.activate(global.get_current_time()); return true; }\n    TestActivate(index) { this._activate(index); }\n    Ping() {")
     (extension / 'extension.js').write_text(source)
     os.environ.update(XDG_DATA_HOME=str(work / 'data'), XDG_CONFIG_HOME=str(work / 'config'),
                       WAYLAND_DISPLAY='logi-ring-test', GDK_BACKEND='wayland')
@@ -93,10 +94,32 @@ def inside(work, output):
         time.sleep(.5)
         events = [tuple(map(int, line.split())) for line in keys.read_text().splitlines()]
         assert any(key == ord('c') and state & 4 for key, state in events), events
+        # Match the identity GNOME actually exposes for this Wayland window.
+        apps = json.loads(call('ListApplications').unpack()[0])
+        assert len(apps) == 1, apps
+        config_path = work / 'config/logioptions/ring-profiles.json'
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config = dict(version=1, default=['copy'] * 8, applications={
+            apps[0]['id']: dict(name='Test editor', slots=['save'] * 8)})
+        config_path.write_text(json.dumps(config))
+        profile = json.loads(call('TestProfile').unpack()[0])
+        assert profile['name'] == 'Test editor', profile
+        call('Show')
+        call('TestActivate', GLib.Variant('(u)', (0,)))
+        time.sleep(.3)
+        events = [tuple(map(int, line.split())) for line in keys.read_text().splitlines()]
+        assert any(key == ord('s') and state & 4 for key, state in events), events
+        config['applications'].clear()
+        config_path.write_text(json.dumps(config))
+        profile = json.loads(call('TestProfile').unpack()[0])
+        assert profile['name'] == 'All apps' and profile['items'][0][0] == 'Copy', profile
+        config_path.write_text('{broken')
+        profile = json.loads(call('TestProfile').unpack()[0])
+        assert profile['items'][0][0] == 'Cut', profile
         call('Show')
         call('Release')
         call('Hide')
-        print('PASS: ring rendered; Copy delivered Ctrl+C to the original test window; release/hide succeeded.')
+        print('PASS: ring rendered; Copy delivered Ctrl+C to the original test window; per-app Save delivered Ctrl+S; removal and malformed-config fallback verified; release/hide succeeded.')
     finally:
         if target:
             target.terminate()
