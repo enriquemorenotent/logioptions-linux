@@ -28,6 +28,7 @@ class Tray:
         self.icon_state = None
         self.indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
         self.busy = False
+        self.quitting = False
         self.menu = Gtk.Menu()
         opener = Gtk.MenuItem(label='Open settings')
         opener.connect('activate', open_settings)
@@ -37,13 +38,44 @@ class Tray:
         self.status_item = Gtk.MenuItem(label='Background service: Checking…')
         self.status_item.set_sensitive(False)
         self.menu.append(self.status_item)
+        self.menu.append(Gtk.SeparatorMenuItem())
+        self.quit_item = Gtk.MenuItem(label='Quit')
+        self.quit_item.connect('activate', self.quit_session)
+        self.menu.append(self.quit_item)
         self.menu.show_all()
         self.indicator.set_menu(self.menu)
         self.indicator.set_secondary_activate_target(opener)
         self.refresh()
         GLib.timeout_add_seconds(5, self.refresh)
 
+    def quit_session(self, *_):
+        if self.quitting:
+            return
+        self.quitting = True
+        self.quit_item.set_sensitive(False)
+        self.status_item.set_label('Quitting…')
+        def stop():
+            from .lifecycle import quit_session
+            try:
+                quit_session()
+            except (OSError, subprocess.SubprocessError) as error:
+                GLib.idle_add(self.quit_failed, str(error))
+            else:
+                GLib.idle_add(Gtk.main_quit)
+        threading.Thread(target=stop, daemon=True).start()
+
+    def quit_failed(self, error):
+        self.quitting = False
+        self.busy = False
+        self.quit_item.set_sensitive(True)
+        self.status_item.set_label('Could not quit — try again')
+        self.status_item.set_tooltip_text(error)
+        return False
+
     def update(self, state):
+        if self.quitting:
+            self.busy = False
+            return False
         reason = warning_reason(state)
         icon_state = ('logioptions-warning-symbolic' if reason else 'logioptions-symbolic',
                       reason or 'Options for Linux')
@@ -66,7 +98,7 @@ class Tray:
         return False
 
     def refresh(self):
-        if self.busy: return True
+        if self.busy or self.quitting: return True
         self.busy = True
         def read():
             try:

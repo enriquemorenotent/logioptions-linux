@@ -1,10 +1,8 @@
-Options for Linux 0.1.2 for Ubuntu 26.04 amd64 with GNOME 50.
+Options for Linux 0.1.3 for Ubuntu 26.04 amd64 with GNOME 50.
 
-- Makes command-line help describe the desktop app and mark device tools as advanced.
-- Adds `logioptions --version` and `logioptions status`.
-- Opens the app when no command is supplied.
-- Shows service status and cached device readings without interrupting the ring.
-- Keeps `gui --help` from starting background services.
+- Adds Quit to the tray menu.
+- Quit closes the app window and stops the tray and Actions Ring listener.
+- Login startup preferences stay unchanged; opening the app starts services again.
 
 For existing PPA users, run `sudo apt update` and then
 `sudo apt install --only-upgrade logioptions-linux`.

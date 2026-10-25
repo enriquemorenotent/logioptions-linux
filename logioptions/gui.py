@@ -8,7 +8,7 @@ from pathlib import Path
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from .device import Device
 from .events import capture_control
@@ -455,6 +455,14 @@ class OptionsApp(Adw.Application):
     def __init__(self):
         super().__init__(application_id='local.logioptions.Rebuild')
         self.window = None
+        quit_action = Gio.SimpleAction.new('quit', None)
+        quit_action.connect('activate', self.quit_session)
+        self.add_action(quit_action)
+
+    def quit_session(self, *_):
+        if self.window:
+            self.window.on_close()
+        self.quit()
 
     def do_activate(self):
         if not self.window:
