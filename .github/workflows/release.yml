@@ -1,0 +1,81 @@
+name: Build and publish Ubuntu package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: logioptions-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(cat VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v$version" > /tmp/refs.json
+          jq -e --arg ref "refs/tags/v$version" 'all(.[]; .ref != $ref)' /tmp/refs.json
+      - name: Build package
+        run: python3 scripts/build_deb.py
+      - name: Test install, installed modules, UI, upgrade and removal
+        run: |
+          docker run --name logioptions-qa -v "$PWD:/src:ro" ubuntu:26.04 sh -c '
+            set -eu
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends /src/dist/*.deb xvfb dbus-x11 xauth nodejs
+            sh /src/scripts/check_package.sh
+            apt-get install -y --reinstall /src/dist/*.deb
+            logioptions --help
+            apt-get remove -y logioptions-linux
+            test ! -e /usr/bin/logioptions
+          '
+      - name: Install repository tools
+        run: sudo apt-get update -qq && sudo apt-get install -y apt-utils
+      - name: Sign APT repository
+        env:
+          APT_GPG_KEY_ID: ${{ secrets.LOGIOPTIONS_APT_GPG_KEY_ID }}
+          APT_PRIVATE_KEY: ${{ secrets.LOGIOPTIONS_APT_GPG_PRIVATE_KEY }}
+          APT_PASSPHRASE: ${{ secrets.LOGIOPTIONS_APT_GPG_PASSPHRASE }}
+        run: |
+          set -eu
+          export GNUPGHOME="$RUNNER_TEMP/logioptions-gpg"
+          mkdir -m 700 "$GNUPGHOME"
+          export APT_GPG_PASSPHRASE_FILE="$RUNNER_TEMP/logioptions-passphrase"
+          trap 'rm -rf "$GNUPGHOME" "$APT_GPG_PASSPHRASE_FILE"' EXIT
+          (umask 077; printf '%s' "$APT_PASSPHRASE" > "$APT_GPG_PASSPHRASE_FILE")
+          printf '%s' "$APT_PRIVATE_KEY" | gpg --batch --import
+          python3 scripts/build_apt.py
+      - name: Verify signed APT install
+        run: |
+          docker run --rm -v "$PWD/pages/apt:/repo:ro" ubuntu:26.04 sh -c '
+            set -eu
+            cp /repo/logioptions-linux-archive-keyring.gpg /usr/share/keyrings/logioptions-linux.gpg
+            echo "deb [signed-by=/usr/share/keyrings/logioptions-linux.gpg] file:/repo resolute main" > /etc/apt/sources.list.d/logioptions.list
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends logioptions-linux
+            logioptions --help
+          '
+      - name: Publish tested package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(cat VERSION)
+          gh release create "v$version" dist/*.deb dist/SHA256SUMS --target "$GITHUB_SHA" \
+            --title "Options for Linux $version" --notes-file packaging/RELEASE-NOTES.md --prerelease
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+      - uses: actions/deploy-pages@v4
+        id: deployment

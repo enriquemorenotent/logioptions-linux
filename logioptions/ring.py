@@ -27,13 +27,14 @@ def available():
 
 class RingListener:
     def __init__(self, descriptor, status=lambda message: None, *, transport_factory=LinuxHidppTransport,
-                 device_factory=Device, call=shell_call, health_interval=5, clock=time.monotonic):
+                 device_factory=Device, call=shell_call, health_interval=5, clock=time.monotonic, maintenance=None):
         self.descriptor = descriptor
         self.status = status
         self.transport_factory = transport_factory
         self.device_factory = device_factory
         self.call = call
         self.health_interval = health_interval
+        self.maintenance = maintenance
         self.clock = clock
         self.cancel = threading.Event()
         self.thread = threading.Thread(target=self._run, name='actions-ring', daemon=False)
@@ -41,7 +42,7 @@ class RingListener:
 
     def stop(self):
         self.cancel.set()
-        self.thread.join(timeout=10)
+        self.thread.join(timeout=30)
         if self.thread.is_alive():
             raise RuntimeError('Actions Ring is still releasing the receiver; try again shortly')
 
@@ -70,6 +71,11 @@ class RingListener:
                                 tracker = ControlTracker(device.device_index, device.feature(0x1B04)['index'])
                                 self.call('Hide')
                                 self.status('Actions Ring recovered · thumb pad reporting restored')
+                            if self.maintenance:
+                                try:
+                                    self.maintenance(transport)
+                                except Exception as error:
+                                    self.status(f'Device settings retry: {error}')
                             next_check = self.clock() + self.health_interval
                         report = transport.read_notification(timeout=0.1)
                         change = tracker.feed(report) if report else None

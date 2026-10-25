@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+# Stop only this application's user services on removal, not during upgrades.
+if [ "$1" = remove ] || [ "$1" = deconfigure ]; then
+    for runtime in /run/user/[0-9]*; do
+        [ -S "$runtime/bus" ] || continue
+        uid=${runtime##*/}
+        user=$(getent passwd "$uid" | cut -d: -f1)
+        [ -n "$user" ] || continue
+        runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+            timeout 60 systemctl --user stop logioptions-ring.service logioptions-tray.service || true
+    done
+fi

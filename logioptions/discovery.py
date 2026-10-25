@@ -50,10 +50,12 @@ def interfaces():
 def snapshot(device, path):
     result = dict(path=path, device_index=device.device_index, name=device.name(),
                   key=f'{path}:{device.device_index}', read_errors=[])
-    for name, reader in [('kind_code', device.kind_code), ('battery', device.battery_status),
-                         ('dpi', device.dpi), ('smartshift', device.smartshift),
+    for name, reader in [('identity', device.identity), ('kind_code', device.kind_code), ('battery', device.battery_status),
+                         ('thumb_force', device.thumb_force), ('dpi', device.dpi), ('smartshift', device.smartshift), ('wheel_capabilities', device.wheel_capabilities),
                          ('controls', device.controls), ('haptics', device.haptic_config),
-                         ('fn_mode', device.fn_mode), ('backlight', device.backlight)]:
+                         ('fn_mode', device.fn_mode), ('backlight', device.backlight),
+                         ('vertical_scroll', device.scroll_direction),
+                         ('thumb_scroll', lambda: device.scroll_direction(True))]:
         try:
             result[name] = reader()
         except UnsupportedFeature:

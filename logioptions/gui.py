@@ -147,11 +147,15 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         button.connect('clicked', lambda *_: callback())
         return button
 
-    def action(self, work, success):
-        selected = dict(self.devices[self.selected])
+    def action(self, work, success, remember=None):
+        selected = self.devices[self.selected]
         def execute():
             with LinuxHidppTransport(selected['path']) as transport:
-                return work(Device(transport, selected['device_index']))
+                from .preferences import apply_and_remember
+                device = Device(transport, selected['device_index'])
+                if remember:
+                    return apply_and_remember(device, selected, remember, work)
+                return work(device)
         def complete(result):
             title = self.panel_title if self.drawer.get_visible() else None
             self.render_device()
@@ -191,7 +195,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                     if actual['current'] != chosen:
                         raise ValueError('The device did not accept that DPI value')
                     device['dpi'] = actual
-                self.action(apply, f'Pointer speed set to {chosen:,} DPI')
+                self.action(apply, f'Pointer speed set to {chosen:,} DPI', remember='dpi')
             card.append(self.button('Apply pointer speed', apply_dpi, True))
         if 'haptics' in device:
             current = device['haptics']
@@ -216,36 +220,102 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 def apply(d):
                     device['haptics'] = (d.test_haptic_feedback(on, level) if test
                                          else d.set_haptic_feedback(on, level))
-                self.action(apply, f'Feedback set to {level}%' + (' · test vibration sent' if test else ''))
+                self.action(apply, f'Feedback set to {level}%' + (' · test vibration sent' if test else ''), remember='haptics')
             buttons.append(self.button('Apply feedback', apply_feedback, True))
             buttons.append(self.button('Apply and test vibration', lambda: apply_feedback(True)))
             card.append(buttons)
         if 'smartshift' in device:
             card = self.card('Scroll wheel')
-            mode = Gtk.DropDown.new_from_strings(['Free-spin', 'Ratchet'])
-            mode.set_selected(0 if device['smartshift']['mode_code'] == 1 else 1)
+            state = device['smartshift']
+            mode = Gtk.DropDown.new_from_strings(['Free-spin', 'Ratchet', 'SmartShift'])
+            mode.set_selected(0 if state['mode_code'] == 1 else 1 if state['threshold'] >= 50 else 2)
+            card.append(label('Wheel mode'))
             card.append(mode)
+            sensitivity_title = label('Switching speed', 'muted')
+            card.append(sensitivity_title)
+            threshold = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, 49, 1)
+            threshold.set_digits(0)
+            threshold.set_value(max(1,min(49,state['threshold'])))
+            card.append(threshold)
+            hint = label('Lower: switches to free-spin more easily. Higher: requires a faster spin.', 'muted')
+            hint.set_wrap(True)
+            card.append(hint)
+            torque_title = label('Wheel resistance', 'muted')
+            card.append(torque_title)
+            torque = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, 100, 1)
+            torque.set_digits(0)
+            torque.set_value(max(1,state['torque']))
+            card.append(torque)
+            torque_hint = label('Lower: lighter clicks. Higher: firmer clicks.', 'muted')
+            torque_hint.set_wrap(True)
+            card.append(torque_hint)
+            adjustable = device.get('wheel_capabilities', {}).get('tunable_torque', False)
+            def show_wheel_controls(*_):
+                for widget in (sensitivity_title,threshold,hint):
+                    widget.set_visible(mode.get_selected() == 2)
+                for widget in (torque_title,torque,torque_hint):
+                    widget.set_visible(adjustable and mode.get_selected() != 0)
+            mode.connect('notify::selected',show_wheel_controls)
+            show_wheel_controls()
             def apply_mode():
-                chosen = 1 if mode.get_selected() == 0 else 2
+                chosen = ('free','ratchet','smart')[mode.get_selected()]
+                speed = int(threshold.get_value())
+                resistance = int(torque.get_value()) if adjustable else state['torque']
                 def apply(d):
-                    original = d.smartshift()
-                    d.set_smartshift_bytes(chosen, original['threshold'], original['torque'])
-                    actual = d.smartshift()
-                    if actual['mode_code'] != chosen:
-                        raise ValueError('The device did not accept the wheel mode')
-                    device['smartshift'] = actual
-                self.action(apply, 'Wheel mode updated')
-            card.append(self.button('Apply wheel mode', apply_mode))
+                    device['smartshift'] = d.set_wheel_settings(chosen, speed, resistance)
+                self.action(apply, 'Wheel settings updated', remember='smartshift')
+            card.append(self.button('Apply wheel settings', apply_mode, True))
+        for setting, title, thumb in [('vertical_scroll', 'Scroll wheel', False),
+                                       ('thumb_scroll', 'Horizontal scroll', True)]:
+            if setting not in device:
+                continue
+            card = self.cards.get(title)
+            if card is None:
+                card = self.card(title)
+            card.append(label('Scroll direction'))
+            direction = Gtk.DropDown.new_from_strings(['Standard', 'Reversed'])
+            direction.set_selected(int(device[setting]['reversed']))
+            card.append(direction)
+            note = label('Reverses this wheel relative to its standard direction. Your desktop’s natural scrolling setting also affects the result.', 'muted')
+            note.set_wrap(True)
+            card.append(note)
+            def apply_direction(key=setting, is_thumb=thumb, choice=direction):
+                reverse = choice.get_selected() == 1
+                def apply(d):
+                    device[key] = d.set_scroll_direction(reverse, is_thumb)
+                self.action(apply, 'Scroll direction updated', remember=key)
+            card.append(self.button('Apply scroll direction', apply_direction, True))
+        if device.get('thumb_force', {}).get('changeable'):
+            card = self.card('Button press sensitivity')
+            state = device['thumb_force']
+            note = label('Choose how firmly you press the thumb pad to open Actions Ring.', 'muted')
+            note.set_wrap(True)
+            card.append(note)
+            force = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, state['minimum'], state['maximum'], 1)
+            force.set_draw_value(False)
+            force.set_round_digits(0)
+            force.set_value(state['current'])
+            card.append(force)
+            card.append(label('Lighter press ← → Firmer press', 'muted'))
+            def apply_force():
+                value = int(force.get_value())
+                def apply(d):
+                    device['thumb_force'] = d.set_thumb_force(value)
+                self.action(apply, 'Thumb-pad pressure updated', remember='thumb_force')
+            card.append(self.button('Apply thumb-pad pressure', apply_force, True))
+            card.append(self.button('Use default pressure', lambda: force.set_value(state['default'])))
         controls = device.get('controls', [])
         if any(c['control_id'] == 416 and c['flags'] & 0x20 for c in controls):
             card = self.card('Thumb pad')
+            if 'Button press sensitivity' in self.cards:
+                card.append(self.button('Adjust thumb-pad pressure', lambda: self.show_panel('Button press sensitivity')))
             card.append(self.button('Configure per-app ring', self.show_ring_profiles, True))
             if self.ring_ready:
                 card.append(label('Press the thumb pad to open Actions Ring.', 'muted'))
                 card.append(label('Runs in the background. Choose an action, or press Escape to cancel.', 'muted'))
                 card.append(self.button('Preview Actions Ring', lambda: shell_call('Show')))
             else:
-                installed = (Path.home() / '.local/share/gnome-shell/extensions/logioptions-ring@local/metadata.json').exists()
+                installed = any((base / 'gnome-shell/extensions/logioptions-ring@local/metadata.json').exists() for base in (Path.home() / '.local/share', Path('/usr/share')))
                 message = ('Actions Ring needs activation. Log out and back in, then reopen this app.'
                            if installed else 'Install the GNOME 50 extension with scripts/install_ring.py, then log out and back in.')
                 note = label(message, 'muted')
@@ -297,7 +367,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                     if actual['remapped_to'] != destination:
                         raise ValueError('The device did not accept the button action')
                     next(c for c in sources if c['control_id'] == cid)['reporting'] = actual
-                self.action(apply, 'Button action updated')
+                self.action(apply, 'Button action updated', remember=f'button:{cid}')
             card.append(self.button('Apply button action', apply_mapping))
         if 'fn_mode' in device:
             card = self.card('Function keys')
@@ -309,7 +379,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 media = choice.get_selected() == 1
                 def apply(d):
                     device['fn_mode'] = d.set_fn_mode(media)
-                self.action(apply, 'Function-key mode updated')
+                self.action(apply, 'Function-key mode updated', remember='fn_mode')
             card.append(self.button('Apply function-key mode', apply_fn, True))
         if 'backlight' in device:
             current = device['backlight']
@@ -348,7 +418,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 chosen, strength = modes[mode.get_selected()], int(level.get_value())
                 def apply(d):
                     device['backlight'] = d.set_backlight(chosen, strength, *values)
-                self.action(apply, 'Keyboard backlight updated')
+                self.action(apply, 'Keyboard backlight updated', remember='backlight')
             card.append(self.button('Apply backlight', apply_backlight, True))
 
 

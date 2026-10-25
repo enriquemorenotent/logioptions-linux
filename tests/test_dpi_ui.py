@@ -80,7 +80,7 @@ class DpiSliderTests(unittest.TestCase):
             from unittest.mock import Mock
             device = Mock()
             device.test_haptic_feedback.return_value = dict(enabled=True, level=90)
-            window.action = lambda work, success: work(device)
+            window.action = lambda work, success, **kwargs: work(device)
             slider.set_value(90)
             preview.emit('clicked')
             device.test_haptic_feedback.assert_called_once_with(True, 90)
@@ -133,7 +133,7 @@ class DpiSliderTests(unittest.TestCase):
                     chosen.append(value)
                 def dpi(self):
                     return dict(current=chosen[-1])
-            window.action = lambda work, success: work(Device())
+            window.action = lambda work, success, **kwargs: work(Device())
             for position in [0, .1, 1.4, 20.68, 30.9, 75.5, 155.7, 156]:
                 slider.set_value(position)
                 apply.emit('clicked')
@@ -163,7 +163,7 @@ class DpiSliderTests(unittest.TestCase):
             device = Mock()
             device.set_fn_mode.return_value = dict(host=0, media_keys=True)
             device.set_backlight.return_value = light
-            window.action = lambda work, success: work(device)
+            window.action = lambda work, success, **kwargs: work(device)
             window.show_panel('Function keys')
             widgets = list(descendants(window.panel))
             next(w for w in widgets if isinstance(w,Gtk.DropDown)).set_selected(1)
@@ -213,3 +213,85 @@ class DpiSliderTests(unittest.TestCase):
         finally:
             window.on_close()
             window.destroy()
+
+    def test_scroll_directions_use_the_correct_wheel(self):
+        from unittest.mock import Mock
+        with patch.object(OptionsWindow,'refresh'):
+            window=OptionsWindow(self.app)
+        try:
+            window.devices=[dict(key='test',name='MX Master 4',kind_code=3,
+                vertical_scroll=dict(reversed=False),thumb_scroll=dict(reversed=True))]
+            window.render_device()
+            device=Mock()
+            device.set_scroll_direction.return_value={'reversed':True}
+            window.action=lambda work,success,**kwargs: work(device)
+            for title, expected in [('Scroll wheel',False),('Horizontal scroll',True)]:
+                window.show_panel(title)
+                card=window.cards[title]
+                children=[]
+                child=card.get_first_child()
+                while child:
+                    children.append(child)
+                    child=child.get_next_sibling()
+                choice=next(w for w in children if isinstance(w,Gtk.DropDown))
+                choice.set_selected(1)
+                next(w for w in children if isinstance(w,Gtk.Button) and w.get_label()=='Apply scroll direction').emit('clicked')
+                device.set_scroll_direction.assert_called_with(True,expected)
+        finally:
+            window.on_close()
+            window.destroy()
+
+    def test_wheel_controls_follow_mode_and_apply_all_values(self):
+        from unittest.mock import Mock
+        with patch.object(OptionsWindow,'refresh'):
+            window=OptionsWindow(self.app)
+        try:
+            state=dict(mode_code=2,threshold=12,torque=75)
+            window.devices=[dict(key='test',name='MX Master 4',kind_code=3,
+                smartshift=state,wheel_capabilities={'tunable_torque':True})]
+            window.render_device()
+            window.show_panel('Scroll wheel')
+            children=[]
+            child=window.cards['Scroll wheel'].get_first_child()
+            while child:
+                children.append(child);child=child.get_next_sibling()
+            mode=next(w for w in children if isinstance(w,Gtk.DropDown))
+            speed,torque=[w for w in children if isinstance(w,Gtk.Scale)]
+            self.assertEqual(mode.get_selected(),2)
+            self.assertTrue(speed.get_visible())
+            mode.set_selected(0)
+            self.assertFalse(speed.get_visible());self.assertFalse(torque.get_visible())
+            mode.set_selected(1)
+            self.assertFalse(speed.get_visible());self.assertTrue(torque.get_visible())
+            mode.set_selected(2);speed.set_value(20);torque.set_value(60)
+            device=Mock();device.set_wheel_settings.return_value=state
+            window.action=lambda work,success,**kwargs: work(device)
+            next(w for w in children if isinstance(w,Gtk.Button) and w.get_label()=='Apply wheel settings').emit('clicked')
+            device.set_wheel_settings.assert_called_once_with('smart',20,60)
+        finally:
+            window.on_close();window.destroy()
+
+    def test_thumb_pressure_uses_device_range_and_saves(self):
+        from unittest.mock import Mock
+        with patch.object(OptionsWindow,'refresh'):
+            window=OptionsWindow(self.app)
+        try:
+            state=dict(changeable=True,minimum=4748,maximum=7894,default=5935,current=6035)
+            window.devices=[dict(key='test',name='MX Master 4',kind_code=3,thumb_force=state)]
+            window.render_device();window.show_panel('Button press sensitivity')
+            children=[];child=window.cards['Button press sensitivity'].get_first_child()
+            while child:
+                children.append(child);child=child.get_next_sibling()
+            slider=next(w for w in children if isinstance(w,Gtk.Scale))
+            self.assertEqual(slider.get_adjustment().get_lower(),4748)
+            self.assertEqual(slider.get_adjustment().get_upper(),7894)
+            next(w for w in children if isinstance(w,Gtk.Button) and w.get_label()=='Use default pressure').emit('clicked')
+            self.assertEqual(slider.get_value(),5935)
+            slider.set_value(6200)
+            device=Mock();device.set_thumb_force.return_value=state
+            window.action=Mock(side_effect=lambda work,success,**kwargs: work(device))
+            next(w for w in children if isinstance(w,Gtk.Button) and w.get_label()=='Apply thumb-pad pressure').emit('clicked')
+            device.set_thumb_force.assert_called_once_with(6200)
+            self.assertEqual(window.action.call_args.kwargs['remember'],'thumb_force')
+        finally:
+            window.on_close();window.destroy()

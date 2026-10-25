@@ -29,8 +29,8 @@ mode. Each Apply writes and verifies readback. Existing unrelated settings remai
 Solaar's six overlapping keyboard controls are locally marked ignore, with a
 backup of its configuration, preventing it from overwriting app changes.
 
-Desired-setting persistence across reconnect remains separate work. These
-controls do not yet promise restoration after a device loses its configuration.
+Applied settings are now saved by hardware identity and restored by the background
+service. See [persistence and validation boundaries](SETTING-PERSISTENCE.md).
 
 Discovery correction: a live keyboard identity lookup timed out at 250 ms and
 then succeeded at 1 second. Discovery now retries only unanswered/failed slots

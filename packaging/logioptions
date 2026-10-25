@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+import sys
+sys.path.insert(0, '/usr/lib/logioptions-linux')
+if len(sys.argv) == 1:
+    sys.argv.append('gui')
+if sys.argv[1] == 'session':
+    from logioptions.session import main
+elif sys.argv[1] == 'background':
+    from logioptions.background import main
+elif sys.argv[1] == 'tray':
+    from logioptions.tray import main
+else:
+    if sys.argv[1] == 'gui':
+        from logioptions.session import main as activate
+        activate()
+    from logioptions.__main__ import main
+raise SystemExit(main())

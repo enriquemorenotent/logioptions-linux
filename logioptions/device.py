@@ -25,6 +25,43 @@ class Device:
         index = self.feature(feature_id)['index']
         return self.transport.request(self.device_index, index, function, payload)[4:]
 
+    def identity(self, timeout=2):
+        feature = self.transport.lookup_feature(self.device_index, 0x0003, timeout=timeout)
+        if not feature['index']:
+            raise UnsupportedFeature('Hardware identity unavailable')
+        data = self.transport.request(self.device_index, feature['index'], 0, timeout=timeout)[4:]
+        if len(data) < 13 or data[1:5] in (bytes(4), b'\xff' * 4):
+            raise ValueError('Invalid hardware identity; settings will not be restored')
+        return data[7:13].hex() + ':' + data[1:5].hex()
+
+    def thumb_force(self):
+        import struct
+        count = self.request(0x19C0, 0)
+        if not count or count[0] != 1:
+            raise UnsupportedFeature('Thumb pressure requires a single force-sensing button')
+        info = self.request(0x19C0, 1, b'\0')
+        current = self.request(0x19C0, 2, b'\0')
+        if len(info) < 8 or len(current) < 2:
+            raise ValueError('Truncated thumb pressure response')
+        flags, default, maximum, minimum = struct.unpack('>HHHH', info[:8])
+        value = int.from_bytes(current[:2], 'big')
+        if not minimum < maximum or not minimum <= value <= maximum or not minimum <= default <= maximum:
+            raise ValueError('Invalid thumb pressure range')
+        return dict(changeable=bool(flags & 1), default=default, minimum=minimum,
+                    maximum=maximum, current=value)
+
+    def set_thumb_force(self, value):
+        state = self.thumb_force()
+        if not state['changeable']:
+            raise ValueError('Thumb pressure is read-only')
+        if type(value) is not int or not state['minimum'] <= value <= state['maximum']:
+            raise ValueError('Thumb pressure is outside the device range')
+        self.request(0x19C0, 3, b'\0' + value.to_bytes(2, 'big'))
+        actual = self.thumb_force()
+        if actual['current'] != value:
+            raise ValueError('Mouse did not accept the thumb pressure')
+        return actual
+
     def fn_mode(self):
         # 40A3 is host-specific; query the active host rather than assuming slot 0.
         self.feature(0x40A3)
@@ -190,11 +227,56 @@ class Device:
             payload += bytes([level_byte])
         return self.request(0x2201, 3, payload)
 
+    def scroll_direction(self, thumb=False):
+        feature = 0x2150 if thumb else 0x2121
+        data = self.request(feature, 1)
+        size, offset, mask = (2, 1, 1) if thumb else (1, 0, 4)
+        if len(data) < size:
+            raise ValueError('Truncated wheel configuration')
+        return dict(reversed=bool(data[offset] & mask), raw_hex=data[:size].hex())
+
+    def set_scroll_direction(self, reversed, thumb=False):
+        if type(reversed) is not bool:
+            raise ValueError('Scroll direction must be boolean')
+        before = self.scroll_direction(thumb)
+        data = bytearray.fromhex(before['raw_hex'])
+        offset, mask = (1, 1) if thumb else (0, 4)
+        data[offset] = (data[offset] & ~mask) | (mask if reversed else 0)
+        self.request(0x2150 if thumb else 0x2121, 2, bytes(data))
+        actual = self.scroll_direction(thumb)
+        if actual['raw_hex'] != data.hex():
+            raise ValueError('Mouse did not accept the wheel direction')
+        return actual
+
     def smartshift(self):
         data = self.request(0x2111, 1)
         if len(data) < 3:
             raise ValueError('Truncated SmartShift response')
         return dict(mode_code=data[0], threshold=data[1], torque=data[2], raw_hex=data.hex())
+
+    def wheel_capabilities(self):
+        data = self.request(0x2111, 0)
+        if not data: raise ValueError('Missing wheel capabilities')
+        return dict(tunable_torque=bool(data[0] & 1))
+
+    def set_wheel_settings(self, mode, threshold, torque):
+        if mode not in ('free', 'ratchet', 'smart'):
+            raise ValueError('Invalid wheel mode')
+        _integer(threshold, 49, 'SmartShift threshold')
+        if threshold < 1: raise ValueError('SmartShift threshold must be 1–49')
+        _integer(torque, 100, 'wheel resistance')
+        if torque < 1: raise ValueError('Wheel resistance must be 1–100')
+        before = self.smartshift()
+        if torque != before['torque'] and not self.wheel_capabilities()['tunable_torque']:
+            raise ValueError('This mouse does not support adjustable resistance')
+        desired = dict(mode_code=1 if mode == 'free' else 2,
+                       threshold=threshold if mode == 'smart' else 255 if mode == 'ratchet' else before['threshold'],
+                       torque=torque)
+        self.set_smartshift_bytes(desired['mode_code'], desired['threshold'], torque)
+        actual = self.smartshift()
+        if any(actual[k] != v for k,v in desired.items()):
+            raise ValueError('Mouse did not accept the wheel settings')
+        return actual
 
     def set_smartshift_bytes(self, mode, threshold, torque):
         payload = bytes([_integer(mode, 255, 'mode'), _integer(threshold, 255, 'threshold'), _integer(torque, 255, 'torque')])

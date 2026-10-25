@@ -16,8 +16,16 @@ units.mkdir(parents=True, exist_ok=True)
     '[Service]\nType=simple\n'
     f'WorkingDirectory={working_directory}\n'
     'ExecStart=/usr/bin/python3 -m logioptions.background\n'
-    'Restart=on-failure\nRestartSec=3\nTimeoutStopSec=30\n\n'
+    'Restart=on-failure\nRestartSec=3\nTimeoutStopSec=45\n\n'
+    '[Install]\nWantedBy=graphical-session.target\n')
+(units / 'logioptions-tray.service').write_text(
+    '[Unit]\nDescription=Options for Linux tray icon\n'
+    'PartOf=graphical-session.target\nAfter=graphical-session.target\n\n'
+    '[Service]\nType=simple\n'
+    f'WorkingDirectory={working_directory}\n'
+    'ExecStart=/usr/bin/python3 -m logioptions.tray\n'
+    'Restart=on-failure\nRestartSec=3\n\n'
     '[Install]\nWantedBy=graphical-session.target\n')
 subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
-subprocess.run(['systemctl', '--user', 'enable', '--now', 'logioptions-ring.service'], check=True)
-print('Background Actions Ring enabled for this and future graphical sessions.')
+subprocess.run(['systemctl', '--user', 'enable', '--now', 'logioptions-ring.service', 'logioptions-tray.service'], check=True)
+print('Background Actions Ring and tray icon enabled for this and future graphical sessions.')

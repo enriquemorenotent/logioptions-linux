@@ -1,0 +1,13 @@
+[Unit]
+Description=Options for Linux background Actions Ring
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionPathExists=/usr/bin/logioptions
+[Service]
+Type=simple
+ExecStart=/usr/bin/logioptions background
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=45
+[Install]
+WantedBy=graphical-session.target

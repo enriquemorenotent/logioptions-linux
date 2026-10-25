@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+if command -v udevadm >/dev/null 2>&1 && [ -d /run/udev ]; then
+    udevadm control --reload-rules || true
+fi

@@ -360,9 +360,9 @@ class Presentation:
                 self.add_callout(title, '', card, x, y, cid)
         elif self.section == 'point':
             dpi = device.get('dpi', {}).get('current')
-            self.add_callout('Scroll wheel', 'Mode: ' + ('Free-spin' if device.get('smartshift',{}).get('mode_code') == 1 else 'Ratchet'), 'Scroll wheel',.85,.17)
+            self.add_callout('Scroll wheel', 'Mode: ' + ('Free-spin' if device.get('smartshift',{}).get('mode_code') == 1 else 'Ratchet' if device.get('smartshift',{}).get('threshold',255) >= 50 else 'SmartShift'), 'Scroll wheel',.85,.17)
             self.add_callout('Thumb wheel','Horizontal scroll','Horizontal scroll',-.32,.48)
-            self.add_callout('Button press sensitivity','Not configured','Button press sensitivity',-.38,.70)
+            self.add_callout('Button press sensitivity','Thumb-pad pressure' if device.get('thumb_force', {}).get('changeable') else 'Unavailable','Button press sensitivity',-.38,.70)
             self.add_callout('Pointer speed',f'{dpi:,} DPI' if dpi else 'Unavailable','Pointer speed',.92,.68)
         elif self.section == 'haptics':
             h = device.get('haptics', {})

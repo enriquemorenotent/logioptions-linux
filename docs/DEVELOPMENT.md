@@ -87,14 +87,13 @@ or macOS environment with the relevant hardware and permission to capture it.
 A public checkout does **not** include Logitech's device artwork, fonts, installers,
 or the private hardware captures referenced in the research notes. The app uses
 system-font/icon fallbacks without the locally extracted UI assets. Tests that
-need those research artifacts skip when the files are absent. There is currently
-no packaged release or automatic device-permission setup.
+need those research artifacts skip when the files are absent. The Debian package includes device-access rules and session startup.
 
 The native UI now follows the observed Options+ 2.9 device pages. See
 [UI reference and verification](../research/UI-REFERENCE.md) for screenshots,
 local asset provenance, and remaining visual/feature differences.
 
-To enable background listening on an existing extension installation, run
+To enable background listening and the tray icon on an existing extension installation, run
 `/usr/bin/python3 scripts/install_background.py`. No further logout is needed.
 The checkout must stay at its installed path. To disable background listening:
 `systemctl --user disable --now logioptions-ring.service`.
@@ -112,3 +111,53 @@ Profiles live in `$XDG_CONFIG_HOME/logioptions/ring-profiles.json` (normally
 desktop application ID, with a WM_CLASS fallback for unmatched running windows.
 After upgrading the extension, log out and back in once to load the new code.
 Subsequent profile edits take effect without restarting anything.
+
+Device settings applied in the GUI are saved to
+`~/.config/logioptions/devices.json` (or under `$XDG_CONFIG_HOME`). The background
+service checks and restores them by hardware identity, including devices waking
+after startup. No test vibration is played during restoration. Fn settings are
+scoped to the active host; automatic backlight brightness remains sensor-driven.
+See [validation and implementation details](../research/SETTING-PERSISTENCE.md).
+
+### Tray icon
+
+The installer enables `logioptions-tray.service` for graphical sessions. It uses
+GTK 3 and Ayatana AppIndicator in a separate process from the GTK 4 settings UI.
+Dependencies on Ubuntu: `gir1.2-ayatanaappindicator3-0.1`, `gir1.2-gtk-3.0`,
+and an enabled AppIndicator shell extension (Ubuntu includes one).
+Closing settings leaves both the tray and background listener running.
+To disable only the tray: `systemctl --user disable --now logioptions-tray.service`.
+
+Battery readings come from the existing receiver owner, refreshed every minute.
+The tray never opens HID devices or pauses the ring. Readings older than 90 seconds
+are marked last known; service status is checked every five seconds. The tray's
+Open settings action uses GApplication activation, reopening or focusing the UI.
+
+The tray uses theme-aware monochrome symbolic icons. A steady warning badge appears
+when the background service is stopped or a fresh battery reading is 20% or less.
+Old battery readings do not trigger warnings; percentages stay in the menu.
+
+### Debian package and signed updates
+
+`python3 scripts/build_deb.py` builds `dist/logioptions-linux_VERSION_all.deb`.
+The public package includes only Python sources, original symbolic icons, and the
+GNOME extension. Extracted assets and private captures are excluded. Native files
+live under `/usr/lib/logioptions-linux`, with the `logioptions` launcher in `/usr/bin`.
+
+The package targets Ubuntu 26.04 with GNOME 50. The APT repository currently
+advertises amd64; the Python payload itself is architecture-independent. Running
+`logioptions session` as the desktop user activates services and the extension;
+the launcher does this on first open and the session autostart repeats it at login.
+Recognized source-install overrides are backed up under
+`~/.config/logioptions/source-install-backup` so packaged units can take over.
+Device settings and ring profiles remain in their existing user directory.
+
+The manually dispatched release workflow tests package install/reinstall/removal,
+installed Python tests, isolated GTK controls, and signed APT installation before
+publishing the exact tested `.deb` to GitHub Releases and the repository to Pages.
+Set VERSION to a new semantic version before each release. Required repository
+secrets are LOGIOPTIONS_APT_GPG_KEY_ID (full fingerprint),
+LOGIOPTIONS_APT_GPG_PRIVATE_KEY, and LOGIOPTIONS_APT_GPG_PASSPHRASE.
+The signing key is separate from Pulsete's. Unsigned repository builds fail.
+Installing a downloaded `.deb` does not silently add an APT source; follow the
+Pages setup instructions to opt into updates.

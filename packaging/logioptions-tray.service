@@ -1,0 +1,12 @@
+[Unit]
+Description=Options for Linux tray icon
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionPathExists=/usr/bin/logioptions
+[Service]
+Type=simple
+ExecStart=/usr/bin/logioptions tray
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=graphical-session.target

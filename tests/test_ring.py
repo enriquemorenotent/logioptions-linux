@@ -91,3 +91,14 @@ class RingTests(unittest.TestCase):
         self.assertFalse(listener.thread.is_alive())
         self.assertIn('mouse disconnected', errors[-1])
         self.assertEqual(DisconnectedDevice.instances[-1].state['flags'], 0)
+
+    def test_maintenance_runs_with_receiver_without_restarting_listener(self):
+        maintained=threading.Event()
+        listener=RingListener({'path':'fake','device_index':2}, transport_factory=Transport,
+            device_factory=Device, call=lambda method: None, health_interval=.01,
+            maintenance=lambda transport: maintained.set())
+        try:
+            self.assertTrue(maintained.wait(2))
+            self.assertTrue(listener.thread.is_alive())
+        finally:
+            listener.stop()

@@ -8,6 +8,8 @@ import threading
 
 from .discovery import discover
 from .ring import RingListener, available
+from .preferences import restore_available, reconcile
+from .tray_status import BatteryCache
 
 
 def lockfile(name):
@@ -35,10 +37,11 @@ def foreground_access():
 
 
 class BackgroundRing:
-    def __init__(self, discover_devices=discover, ready=available, listener=RingListener):
+    def __init__(self, discover_devices=discover, ready=available, listener=RingListener, restore_settings=restore_available):
         self.discover = discover_devices
         self.ready = ready
         self.factory = listener
+        self.restore_settings = restore_settings
         self.listener = None
         self.lease = None
 
@@ -58,19 +61,31 @@ class BackgroundRing:
             if self.listener and self.listener.thread.is_alive():
                 return
             self.stop()
-            if not self.ready():
-                return
             lease = lockfile('device')
             if not acquire(lease, blocking=False):
                 lease.close()
                 return
             self.lease = lease
             try:
+                try:
+                    self.restore_settings()
+                except Exception as error:
+                    print(f'Device settings retry: {error}', flush=True)
+                if not self.ready():
+                    self.stop()
+                    return
                 devices, errors = self.discover()
+                batteries = BatteryCache(devices)
                 mouse = next((d for d in devices if any(c['control_id'] == 416
                              and c['flags'] & 0x20 for c in d.get('controls', []))), None)
                 if mouse:
-                    self.listener = self.factory(mouse, lambda message: print(message, flush=True))
+                    indices = [255] if mouse['device_index'] == 255 else list(range(1, 7))
+                    def maintain(transport):
+                        batteries.refresh(transport, mouse['path'])
+                        reconcile(transport, indices, lambda message: print(message, flush=True))
+                        restore_available(exclude=mouse['path'])
+                    self.listener = self.factory(mouse, lambda message: print(message, flush=True),
+                        maintenance=maintain)
                 else:
                     self.stop()
             except Exception:

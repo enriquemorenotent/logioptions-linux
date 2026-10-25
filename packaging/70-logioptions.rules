@@ -1,0 +1,3 @@
+# Give the active desktop user access to Logitech HID interfaces.
+ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
+ACTION!="remove", SUBSYSTEM=="hidraw", KERNELS=="0005:046D:*", TAG+="uaccess"

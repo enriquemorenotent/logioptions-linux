@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Options for Linux background services
+Exec=logioptions session
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
