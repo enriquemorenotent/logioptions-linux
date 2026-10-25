@@ -1,14 +1,14 @@
-Options for Linux 0.1.3 for Ubuntu 26.04 amd64 with GNOME 50.
+Options for Linux 0.1.4 for Ubuntu 26.04 amd64 with GNOME 50.
 
-- Adds Quit to the tray menu.
-- Quit closes the app window and stops the tray and Actions Ring listener.
-- Login startup preferences stay unchanged; opening the app starts services again.
+GitHub Pages is now the sole active APT repository. The setup command installs
+the signed repository and migrates the former PPA:
 
-For existing PPA users, run `sudo apt update` and then
-`sudo apt install --only-upgrade logioptions-linux`.
+```sh
+curl -fsSL https://enriquemorenotent.github.io/logioptions-linux/install.sh | sudo bash
+```
 
-Install the .deb, then open Options for Linux. A first-time extension installation
-needs a logout/login. Saved device settings and ring profiles stay in place.
+Includes Quit in the tray, improved CLI help, --version, status, configurable
+login startup, and device visuals. Saved settings stay in place.
 
 Third-party artwork and fonts are not GPL-licensed. Their owners retain all
 rights; redistribution permission has not been obtained. See assets/logitech/NOTICE.txt.

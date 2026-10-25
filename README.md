@@ -49,16 +49,20 @@ background service, GNOME extension, and device-access rules. Solaar is not requ
 Install with automatic updates:
 
 ```bash
-sudo add-apt-repository ppa:enriquemorenotent-gmail/logioptions-linux
-sudo apt install logioptions-linux
+curl -fsSL https://enriquemorenotent.github.io/logioptions-linux/install.sh | sudo bash
 ```
 
 Open **Options for Linux** from the app launcher. **Log out of Ubuntu and back in**
 after first-time setup to load Actions Ring. The tray and background service then
 start at login; you can close the settings window and keep using the ring.
 
-Updates arrive through Ubuntu’s normal package updates.
-[View the PPA](https://launchpad.net/~enriquemorenotent-gmail/+archive/ubuntu/logioptions-linux).
+The setup script adds our signed GitHub Pages APT repository and installs the app.
+[Review the script](scripts/setup_repository.sh). Updates then arrive through
+Ubuntu’s normal package updates.
+
+**Moving from the PPA?** Run the same command once. It disables our old PPA,
+keeps a backup, and switches you to GitHub Pages without changing your settings.
+The PPA no longer receives releases.
 
 Alternatively, download the `.deb` from
 [GitHub Releases](https://github.com/enriquemorenotent/logioptions-linux/releases)

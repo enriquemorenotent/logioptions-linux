@@ -162,36 +162,12 @@ The signing key is separate from Pulsete's. Unsigned repository builds fail.
 Installing a downloaded `.deb` does not silently add an APT source; follow the
 Pages setup instructions to opt into updates.
 
-### Launchpad PPA source builds
+### Retired Launchpad PPA
 
-The project code is GPL-3.0-only. `LICENSE` and `packaging/copyright` are included
-in both package formats. The PPA is `ppa:enriquemorenotent-gmail/logioptions-linux`. Launchpad builds
-packages from signed source uploads for Ubuntu Resolute. Version
-`0.1.0-0ubuntu1~ppa1` is published. Adding the PPA and installing the package were
-verified in a clean Ubuntu 26.04 container, including signature verification,
-dependency installation, CLI startup, and the installed service/extension files.
-This container check does not test a graphical login or physical devices.
+GitHub Pages is the sole active APT channel starting with 0.1.4. Do not upload
+new versions to Launchpad. Existing PPA users run the README setup command to
+switch repositories. The setup script backs up the dedicated PPA source and
+preserves application preferences. Use `--repository-only` to configure sources
+without installing or upgrading the application.
 
-With Debian packaging tools (`build-essential`, `debhelper`, `dpkg-dev`, Python 3,
-and Node.js for the protocol/profile tests), prepare a source-only upload:
-
-```bash
-python3 scripts/build_source.py --maintainer 'Your Name <your-verified-launchpad-email>'
-```
-
-This creates a source upload under `dist/ppa`, using an explicit source allowlist.
-Private captures, screenshots, keys, and Git history are not included.
-Third-party visuals are included with their ownership notice. The earlier PPA
-0.1.0 build excluded these visuals; eligibility for later PPA uploads must be
-reviewed separately because the included assets lack redistribution permission. Launchpad rebuilds the binary using `packaging/ppa/rules` and the same
-payload staging code used by the standalone `.deb` builder. The local source
-build is unsigned; publication requires a registered Launchpad signing key:
-
-```bash
-debsign -k YOUR_REGISTERED_KEY dist/ppa/*_source.changes
-dput ppa:enriquemorenotent-gmail/logioptions-linux dist/ppa/*_source.changes
-```
-
-Use the exact `.changes` filename when multiple versions are present. Confirm
-the corresponding source and binary publication on Launchpad before changing
-public installation instructions. Existing GitHub releases remain available.
+Historical source-package tooling remains in `scripts/build_source.py`.
