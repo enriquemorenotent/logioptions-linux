@@ -55,7 +55,7 @@ def main():
     shutil.copyfile(root/'packaging/copyright',debian/'copyright')
     for name in ('postinst','prerm','postrm'):
         shutil.copyfile(root/'packaging/debian'/name,debian/name);(debian/name).chmod(0o755)
-    subprocess.run(['dpkg-buildpackage','-S','-us','-uc','-d'],cwd=tree,check=True)
+    subprocess.run(['dpkg-buildpackage','-S','-nc','-us','-uc','-d'],cwd=tree,check=True)
     print('Unsigned source upload prepared:',output/f'logioptions-linux_{version}_source.changes')
 
 
