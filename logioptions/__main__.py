@@ -7,12 +7,46 @@ from .hidpp import LinuxHidppTransport
 from . import haptics
 
 
-def main():
-    if len(sys.argv) == 2 and sys.argv[1] == 'gui':
-        from .gui import main as gui_main
-        return gui_main()
-    parser = argparse.ArgumentParser(description='Native Linux Logitech device inspection')
-    commands = parser.add_subparsers(dest='command', required=True)
+def version():
+    from pathlib import Path
+    return (Path(__file__).resolve().parents[1] / 'VERSION').read_text().strip()
+
+
+def show_status():
+    import subprocess
+    from .autostart import enabled
+    from .tray_status import battery_labels
+    print(f'Options for Linux {version()}')
+    for unit, title in [('ring', 'Background service'), ('tray', 'Tray icon')]:
+        try:
+            result = subprocess.run(['systemctl', '--user', 'show', '--property=ActiveState',
+                                     '--value', f'logioptions-{unit}.service'],
+                                    capture_output=True, text=True, timeout=5)
+            state = result.stdout.strip() if result.returncode == 0 else 'unavailable'
+        except (OSError, subprocess.TimeoutExpired):
+            state = 'unavailable'
+        print(f'{title}: {state or "unavailable"}')
+    print('Start at login: ' + ('enabled' if enabled() else 'disabled'))
+    print('Latest device readings:')
+    rows = battery_labels()
+    for row in rows:
+        print('  ' + ''.join(char for char in row if char.isprintable()))
+    if not rows:
+        print('  No readings available. Open the app to discover devices.')
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog='logioptions',
+        description='Options for Linux — Logitech device settings, battery tray, and Actions Ring.',
+        epilog='Run logioptions without a command to open the app.\n'
+               'Use logioptions COMMAND --help for command details.\n'
+               'Commands marked Advanced access devices directly; prefer the app for everyday settings.',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--version', action='version', version=f'Options for Linux {version()}')
+    commands = parser.add_subparsers(dest='command', title='commands', metavar='COMMAND')
+    commands.add_parser('gui', help='Open the app (default)')
+    commands.add_parser('status', help='Show background services and latest device readings')
     for name, help_text in [('inspect', 'Read a connected device name, features and battery'),
                             ('settings-read', 'Read current mouse DPI and SmartShift settings'),
                             ('dpi-set', 'Set a device-advertised DPI value'),
@@ -20,7 +54,7 @@ def main():
                             ('remap', 'Remap a programmable control to another hardware control'),
                             ('haptic-read', 'Read haptic configuration bytes'),
                             ('haptic-play', 'Play one waveform on a haptic device')]:
-        command = commands.add_parser(name, help=help_text)
+        command = commands.add_parser(name, help='Advanced: ' + help_text, description=help_text)
         command.add_argument('--path', required=True, help='Logitech HID++ hidraw node')
         command.add_argument('--device-index', type=lambda v: int(v, 0), required=True)
         command.add_argument('--trace', action='store_true', help='Write raw traffic to stderr')
@@ -31,7 +65,12 @@ def main():
         elif name == 'remap':
             command.add_argument('--control', type=lambda v: int(v, 0), required=True)
             command.add_argument('--target', type=lambda v: int(v, 0), required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.command in (None, 'gui'):
+        from .gui import main as gui_main
+        return gui_main()
+    if args.command == 'status':
+        return show_status()
 
     def trace(direction, packet):
         print(json.dumps(dict(direction=direction, hex=packet.hex())), file=sys.stderr)
@@ -63,4 +102,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

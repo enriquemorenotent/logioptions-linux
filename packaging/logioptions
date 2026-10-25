@@ -10,7 +10,7 @@ elif sys.argv[1] == 'background':
 elif sys.argv[1] == 'tray':
     from logioptions.tray import main
 else:
-    if sys.argv[1] == 'gui':
+    if sys.argv[1] == 'gui' and len(sys.argv) == 2:
         from logioptions.session import main as activate
         activate(login=False)
     from logioptions.__main__ import main

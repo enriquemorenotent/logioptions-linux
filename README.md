@@ -67,6 +67,13 @@ alone does not add an update repository.
 
 **[Setup and development guide →](docs/DEVELOPMENT.md)**
 
+## From the terminal
+
+- `logioptions` or `logioptions gui` — open the app.
+- `logioptions --version` — show the installed version.
+- `logioptions status` — show background services and latest device readings.
+- `logioptions --help` — list commands, including advanced device tools.
+
 ## Help shape what comes next
 
 Have a Logitech device you’d like supported, or a feature you miss on Linux?

@@ -1,10 +1,13 @@
-Options for Linux 0.1.1 for Ubuntu 26.04 amd64 with GNOME 50.
+Options for Linux 0.1.2 for Ubuntu 26.04 amd64 with GNOME 50.
 
-- Includes device images and fonts from Logitech Options+.
-- Adds App settings with a “Start automatically when I log in” toggle.
-- Keeps the tray and Actions Ring available when opening the app manually,
-  even when automatic startup is disabled.
-- Preserves startup preferences across package activation and upgrades.
+- Makes command-line help describe the desktop app and mark device tools as advanced.
+- Adds `logioptions --version` and `logioptions status`.
+- Opens the app when no command is supplied.
+- Shows service status and cached device readings without interrupting the ring.
+- Keeps `gui --help` from starting background services.
+
+For existing PPA users, run `sudo apt update` and then
+`sudo apt install --only-upgrade logioptions-linux`.
 
 Install the .deb, then open Options for Linux. A first-time extension installation
 needs a logout/login. Saved device settings and ring profiles stay in place.
