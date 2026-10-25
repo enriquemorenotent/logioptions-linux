@@ -165,8 +165,10 @@ Pages setup instructions to opt into updates.
 ### Launchpad PPA source builds
 
 The project code is GPL-3.0-only. `LICENSE` and `packaging/copyright` are included
-in both package formats. The PPA is not published yet; do not advertise a `ppa:`
-installation command until Launchpad has accepted, built, and published it.
+in both package formats. The PPA is `ppa:enriquemorenotent-gmail/logioptions-linux`. Launchpad builds
+packages from signed source uploads for Ubuntu Resolute. The first build succeeded,
+but initial archive signing and publication are pending; installation from this
+PPA has not been verified yet.
 
 With Debian packaging tools (`build-essential`, `debhelper`, `dpkg-dev`, Python 3,
 and Node.js for the protocol/profile tests), prepare a source-only upload:
@@ -183,7 +185,7 @@ build is unsigned; publication requires a registered Launchpad signing key:
 
 ```bash
 debsign -k YOUR_REGISTERED_KEY dist/ppa/*_source.changes
-dput ppa:YOUR_LAUNCHPAD_ACCOUNT/logioptions-linux dist/ppa/*_source.changes
+dput ppa:enriquemorenotent-gmail/logioptions-linux dist/ppa/*_source.changes
 ```
 
 Use the exact `.changes` filename when multiple versions are present. Confirm
