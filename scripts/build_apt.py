@@ -48,7 +48,7 @@ sha=hashlib.sha256(package.read_bytes()).hexdigest()
 (pages/'index.html').write_text(f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Options for Linux</title>
 <style>body{{font:18px system-ui;max-width:760px;margin:64px auto;padding:0 24px;background:#faf9ff;color:#242627}}h1{{font-size:48px}}a{{color:#7040dc}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#eeebf4;padding:20px;border-radius:12px;font-size:14px}}</style>
 <h1>Options for Linux</h1><p>Native Logitech device controls, a battery tray, and Actions Ring.</p>
-<p>Experimental release {html.escape(version)} for Ubuntu 26.04 amd64 with GNOME 50. Independent project; not affiliated with Logitech. Public packages use fallback visuals.</p>
+<p>Experimental release {html.escape(version)} for Ubuntu 26.04 amd64 with GNOME 50. Independent project; not affiliated with Logitech. Includes third-party device artwork and fonts; see the release asset notices.</p>
 <p><a href="https://github.com/enriquemorenotent/logioptions-linux/releases/tag/v{version}">Download the .deb</a> · <a href="https://github.com/enriquemorenotent/logioptions-linux">Project and help</a></p>
 <h2>Install with updates</h2><pre>curl -fsSLo /tmp/logioptions-linux-keyring.gpg https://enriquemorenotent.github.io/logioptions-linux/apt/logioptions-linux-archive-keyring.gpg
 sudo install -m 644 /tmp/logioptions-linux-keyring.gpg /usr/share/keyrings/logioptions-linux-archive-keyring.gpg

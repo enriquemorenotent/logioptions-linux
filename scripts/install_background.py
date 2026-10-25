@@ -27,5 +27,9 @@ units.mkdir(parents=True, exist_ok=True)
     'Restart=on-failure\nRestartSec=3\n\n'
     '[Install]\nWantedBy=graphical-session.target\n')
 subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
-subprocess.run(['systemctl', '--user', 'enable', '--now', 'logioptions-ring.service', 'logioptions-tray.service'], check=True)
-print('Background Actions Ring and tray icon enabled for this and future graphical sessions.')
+import sys
+sys.path.insert(0, str(project))
+from logioptions.autostart import enabled, UNITS
+subprocess.run(['systemctl', '--user', 'enable' if enabled() else 'disable', *UNITS], check=True)
+subprocess.run(['systemctl', '--user', 'start', *UNITS], check=True)
+print('Background Actions Ring and tray icon started. Login startup preference preserved.')

@@ -33,9 +33,12 @@ def migrate(home):
     return bool(candidates)
 
 
-def main():
+def main(login=True):
     if os.getuid() == 0:
         raise RuntimeError('Run logioptions session as your desktop user, not root')
+    from .autostart import enabled as autostart_enabled, UNITS
+    if login and not autostart_enabled():
+        return
     from .background import lockfile, acquire
     with lockfile('session') as lock:
         if not acquire(lock, blocking=False): return
@@ -52,7 +55,7 @@ def main():
         disabled = list(settings.get_strv('disabled-extensions'))
         if UUID in disabled: settings.set_strv('disabled-extensions',[v for v in disabled if v != UUID])
         Gio.Settings.sync()
-        subprocess.run(['systemctl','--user','enable','--force','logioptions-ring.service','logioptions-tray.service'],check=True)
+        subprocess.run(['systemctl','--user','enable' if autostart_enabled() else 'disable',*UNITS],check=True)
         version = (Path(__file__).resolve().parents[1] / 'VERSION').read_text().strip()
         marker = Path.home() / '.config/logioptions/activated-package-version'
         upgrade = not marker.exists() or marker.read_text().strip() != version

@@ -1,14 +1,17 @@
-First experimental packaged release for Ubuntu 26.04 amd64 with GNOME 50.
+Options for Linux 0.1.1 for Ubuntu 26.04 amd64 with GNOME 50.
 
-Includes MX Master 4 controls, MX Keys for Business settings, the battery tray,
-background settings restoration, and the Actions Ring GNOME extension.
+- Includes device images and fonts from Logitech Options+.
+- Adds App settings with a “Start automatically when I log in” toggle.
+- Keeps the tray and Actions Ring available when opening the app manually,
+  even when automatic startup is disabled.
+- Preserves startup preferences across package activation and upgrades.
 
 Install the .deb, then open Options for Linux. A first-time extension installation
-needs a logout/login. Existing source-install services are migrated with backups;
-your saved device settings and ring profiles stay in place.
+needs a logout/login. Saved device settings and ring profiles stay in place.
 
-Packages contain fallback visuals, not extracted Logitech artwork or fonts.
-Flow and full Options+ feature parity are not implemented. Independent project,
-not affiliated with Logitech. Solaar is not required by this package.
+Third-party artwork and fonts are not GPL-licensed. Their owners retain all
+rights; redistribution permission has not been obtained. See assets/logitech/NOTICE.txt.
+Independent project, not affiliated with Logitech. Flow and full Options+ parity
+are not implemented. Solaar is not required.
 
 APT setup: https://enriquemorenotent.github.io/logioptions-linux/

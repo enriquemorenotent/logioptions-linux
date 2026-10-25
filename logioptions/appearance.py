@@ -1,7 +1,6 @@
 """Options+-style native presentation, measured against the installed Mac UI.
 
-Device renders and fonts are loaded from the user's local research artifacts;
-no extracted Logitech assets are bundled with the implementation.
+Third-party visual assets have separate ownership; see assets/logitech/NOTICE.txt.
 """
 import ctypes
 from datetime import datetime
@@ -11,7 +10,7 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gdk, Gsk
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / 'artifacts/ui-reference'
+ASSETS = ROOT / 'assets/logitech'
 CSS = b'''
 window { background: #fbfbfb; color: #242627; font-family: BrownPro, sans-serif; font-size: 14px; }
 .topbar { padding: 24px 38px 12px; }
@@ -62,7 +61,7 @@ def load_fonts():
         for name in ('regular', 'bold', 'light'):
             path = ASSETS / f'BrownPro-{name}.ttf'
             if path.exists(): fc.FcConfigAppFontAddFile(config, str(path).encode())
-        icon = ROOT / 'artifacts/mac-live-2.9/ui/assets/120228c0ffbb15c5d091.ttf'
+        icon = ASSETS / 'options-icons.ttf'
         if icon.exists(): fc.FcConfigAppFontAddFile(config, str(icon).encode())
         from gi.repository import PangoCairo
         PangoCairo.FontMap.get_default().changed()
@@ -135,6 +134,10 @@ class Presentation:
         self.global_button.add_css_class('flat-icon')
         self.global_button.connect('clicked', lambda *_: self.show_ring_profiles())
         header.append(self.global_button)
+        settings_button = Gtk.Button(icon_name='preferences-system-symbolic', tooltip_text='App settings')
+        settings_button.add_css_class('flat-icon')
+        settings_button.connect('clicked', lambda *_: self.show_app_settings())
+        header.append(settings_button)
         self.refresh_button = Gtk.Button(icon_name='view-refresh-symbolic', tooltip_text='Refresh devices')
         self.refresh_button.add_css_class('flat-icon')
         self.refresh_button.connect('clicked', lambda *_: self.refresh())
@@ -158,7 +161,7 @@ class Presentation:
             button = Gtk.Button(halign=Gtk.Align.START)
             content = row(14)
             glyphs = {'buttons':'\ue926', 'point':'\ue976', 'haptics':'\ue9bb', 'easy':'\ue949', 'flow':'\ue94e', 'settings':'\ue960'}
-            if key in glyphs and (ROOT / 'artifacts/mac-live-2.9/ui/assets/120228c0ffbb15c5d091.ttf').exists():
+            if key in glyphs and (ASSETS / 'options-icons.ttf').exists():
                 content.append(text(glyphs[key], 'reference-icon'))
             else:
                 content.append(Gtk.Image.new_from_icon_name(icon))

@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import sys
 import signal
+import subprocess
 from pathlib import Path
 
 import gi
@@ -79,6 +80,33 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 self.status.set_text(str(error))
             return False
         future.add_done_callback(lambda _: GLib.idle_add(finish))
+
+    def show_app_settings(self):
+        from .autostart import enabled, set_enabled
+        dialog = Adw.PreferencesWindow(transient_for=self, modal=True, title='App settings',
+                                       default_width=560, default_height=300, search_enabled=False)
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(title='Startup')
+        toggle = Adw.SwitchRow(title='Start automatically when I log in',
+            subtitle='Starts the background service and tray icon without opening a window.',
+            active=enabled())
+        note = Adw.ActionRow(title='When turned off, open Options for Linux after login to use the Actions Ring.',
+                            title_lines=3)
+        def changed(row, _):
+            try:
+                set_enabled(row.get_active())
+            except Exception as error:
+                row.handler_block(handler)
+                row.set_active(enabled())
+                row.handler_unblock(handler)
+                self.status.set_text(f'Could not change startup: {error}')
+                dialog.add_toast(Adw.Toast(title='Could not change startup. Please try again.'))
+        handler = toggle.connect('notify::active', changed)
+        group.add(toggle)
+        group.add(note)
+        page.add(group)
+        dialog.add(page)
+        dialog.present()
 
     def show_ring_profiles(self):
         from .profile_ui import ProfileWindow
@@ -440,6 +468,11 @@ class OptionsApp(Adw.Application):
 
 
 def main():
+    from .autostart import start_services
+    try:
+        start_services()
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f'Could not start background services: {error}', file=sys.stderr)
     app = OptionsApp()
     def stop():
         if app.window:

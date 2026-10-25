@@ -1,0 +1,8 @@
+Third-party visual assets
+
+Device renders, BrownPro fonts, and the Options+ icon font were extracted from
+Logitech Options+ for macOS during this project. Device renders were converted
+to PNG for GTK. These files are not covered by this project's GPL-3.0-only license.
+Copyright remains with Logitech and/or the respective asset and font owners.
+No redistribution permission has been obtained or is granted by this project.
+Inclusion does not imply Logitech endorsement.

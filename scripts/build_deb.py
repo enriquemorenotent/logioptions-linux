@@ -19,6 +19,9 @@ def stage_payload(root, stage, version):
     for file in (root/'assets').glob('*.svg'):
         copy(file.relative_to(root),'usr/lib/logioptions-linux/assets/'+file.name)
         copy(file.relative_to(root),'usr/share/icons/hicolor/scalable/status/'+file.name)
+    for file in (root/'assets/logitech').iterdir():
+        if file.suffix in ('.png', '.ttf', '.txt'):
+            copy(file.relative_to(root),'usr/lib/logioptions-linux/assets/logitech/'+file.name)
     target = stage/'usr/lib/logioptions-linux/VERSION'
     target.write_text(version+'\n')
     copy('packaging/logioptions','usr/bin/logioptions',0o755)

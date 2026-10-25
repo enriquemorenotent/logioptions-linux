@@ -18,4 +18,6 @@ class PackagingTests(unittest.TestCase):
             self.assertTrue((stage/'usr/lib/udev/rules.d/70-logioptions.rules').is_file())
             self.assertTrue((stage/'usr/share/gnome-shell/extensions/logioptions-ring@local/extension.js').is_file())
             self.assertFalse((stage/'DEBIAN').exists())
-            self.assertFalse(any('artifacts' in p.parts or p.suffix=='.ttf' for p in stage.rglob('*')))
+            self.assertFalse(any('artifacts' in p.parts for p in stage.rglob('*')))
+            for source in (ROOT/'assets/logitech').iterdir():
+                self.assertEqual((stage/'usr/lib/logioptions-linux/assets/logitech'/source.name).read_bytes(), source.read_bytes())

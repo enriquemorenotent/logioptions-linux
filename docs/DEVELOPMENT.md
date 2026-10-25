@@ -84,9 +84,9 @@ Do not run original installers against the everyday Linux desktop or assume Wine
 implements Logitech's drivers. Runtime investigation needs an isolated Windows
 or macOS environment with the relevant hardware and permission to capture it.
 
-A public checkout does **not** include Logitech's device artwork, fonts, installers,
-or the private hardware captures referenced in the research notes. The app uses
-system-font/icon fallbacks without the locally extracted UI assets. Tests that
+Device artwork and fonts are included in `assets/logitech` with separate
+ownership notices; they are not GPL-licensed and redistribution permission has
+not been obtained. Installers and private hardware captures remain excluded. Tests that
 need those research artifacts skip when the files are absent. The Debian package includes device-access rules and session startup.
 
 The native UI now follows the observed Options+ 2.9 device pages. See
@@ -140,8 +140,8 @@ Old battery readings do not trigger warnings; percentages stay in the menu.
 ### Debian package and signed updates
 
 `python3 scripts/build_deb.py` builds `dist/logioptions-linux_VERSION_all.deb`.
-The public package includes only Python sources, original symbolic icons, and the
-GNOME extension. Extracted assets and private captures are excluded. Native files
+The package includes Python sources, original symbolic icons, the GNOME
+extension, and third-party visuals from `assets/logitech`. Private captures are excluded. Native files
 live under `/usr/lib/logioptions-linux`, with the `logioptions` launcher in `/usr/bin`.
 
 The package targets Ubuntu 26.04 with GNOME 50. The APT repository currently
@@ -180,8 +180,10 @@ python3 scripts/build_source.py --maintainer 'Your Name <your-verified-launchpad
 ```
 
 This creates a source upload under `dist/ppa`, using an explicit source allowlist.
-Private captures, extracted artwork, screenshots, keys, and Git history are not
-included. Launchpad rebuilds the binary using `packaging/ppa/rules` and the same
+Private captures, screenshots, keys, and Git history are not included.
+Third-party visuals are included with their ownership notice. The earlier PPA
+0.1.0 build excluded these visuals; eligibility for later PPA uploads must be
+reviewed separately because the included assets lack redistribution permission. Launchpad rebuilds the binary using `packaging/ppa/rules` and the same
 payload staging code used by the standalone `.deb` builder. The local source
 build is unsigned; publication requires a registered Launchpad signing key:
 

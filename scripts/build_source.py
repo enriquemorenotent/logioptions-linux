@@ -32,6 +32,7 @@ def main():
     files=[root/'VERSION',root/'README.md',root/'LICENSE',root/'scripts/build_deb.py']
     for folder,pattern in [('logioptions','*.py'),('assets','*.svg'),('tests','*.py'),('tests','*.mjs')]:
         files.extend((root/folder).glob(pattern))
+    files.extend(p for p in (root/'assets/logitech').iterdir() if p.suffix in ('.png','.ttf','.txt'))
     files.extend(p for p in (root/'packaging').rglob('*') if p.is_file() and p.suffix not in ('.pyc',))
     files.extend(p for p in (root/'extensions/logioptions-ring@local').iterdir() if p.is_file() and p.suffix in ('.js','.json','.css'))
     for file in files:
@@ -49,7 +50,7 @@ def main():
     binary='\n'.join(line for line in binary.splitlines() if not line.startswith(('Version:','Maintainer:','Section:','Priority:','Homepage:')))
     binary=binary.replace('Depends: ', 'Depends: ${misc:Depends}, ')
     (debian/'control').write_text(f'Source: logioptions-linux\nSection: utils\nPriority: optional\nMaintainer: {args.maintainer}\nBuild-Depends: debhelper-compat (= 13), python3, nodejs\nStandards-Version: 4.7.0\nRules-Requires-Root: no\nHomepage: https://github.com/enriquemorenotent/logioptions-linux\n\n'+binary+'\n')
-    (debian/'changelog').write_text(f'logioptions-linux ({version}) resolute; urgency=medium\n\n  * Initial Launchpad packaging for Ubuntu 26.04 and GNOME 50.\n\n -- {args.maintainer}  {email.utils.format_datetime(datetime.fromtimestamp(epoch, timezone.utc))}\n')
+    (debian/'changelog').write_text(f'logioptions-linux ({version}) resolute; urgency=medium\n\n  * Update application and bundled visuals for Ubuntu 26.04 and GNOME 50.\n\n -- {args.maintainer}  {email.utils.format_datetime(datetime.fromtimestamp(epoch, timezone.utc))}\n')
     shutil.copyfile(root/'packaging/ppa/rules',debian/'rules');(debian/'rules').chmod(0o755)
     shutil.copyfile(root/'packaging/copyright',debian/'copyright')
     for name in ('postinst','prerm','postrm'):

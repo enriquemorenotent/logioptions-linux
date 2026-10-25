@@ -8,9 +8,8 @@ haptic feedback from one place.
 
 ![Options for Linux showing MX Master 4 button controls](docs/screenshots/mx-master-4-window.png)
 
-*The native GTK app in our development setup. This screenshot uses locally
-extracted Logitech artwork and fonts; the public checkout uses fallback visuals
-without those assets.*
+*The native GTK app. Device artwork and fonts come from Logitech Options+;
+these third-party assets are separate from the GPL-licensed application code.*
 
 ## Make your mouse feel right
 
@@ -80,12 +79,13 @@ and [feature coverage](research/COVERAGE.md).
 ---
 
 Independent project. Not affiliated with or endorsed by Logitech. Official
-installers, extracted asset files, and private hardware captures are not bundled.
+installers and private hardware captures are not bundled.
 
 ## License
 
 Copyright © 2026 Enrique Moreno Tent and contributors. The original application
 code, packaging, tests, and original icons are licensed under
 [GNU GPL version 3 only](LICENSE) (`GPL-3.0-only`). This license does not cover
-Logitech trademarks or third-party artwork shown in screenshots. Extracted
-Logitech assets are not included in the source or binary packages.
+Logitech trademarks or the third-party artwork and fonts bundled in
+`assets/logitech`. Those assets retain their owners’ rights; no redistribution
+permission has been obtained. See [asset notices](assets/logitech/NOTICE.txt).

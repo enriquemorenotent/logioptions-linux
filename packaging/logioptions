@@ -12,6 +12,6 @@ elif sys.argv[1] == 'tray':
 else:
     if sys.argv[1] == 'gui':
         from logioptions.session import main as activate
-        activate()
+        activate(login=False)
     from logioptions.__main__ import main
 raise SystemExit(main())
