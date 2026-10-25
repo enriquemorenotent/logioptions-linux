@@ -16,7 +16,7 @@ def show_status():
     import subprocess
     from .autostart import enabled
     from .tray_status import battery_labels
-    print(f'Options for Linux {version()}')
+    print(f'LogiOptions {version()}')
     for unit, title in [('ring', 'Background service'), ('tray', 'Tray icon')]:
         try:
             result = subprocess.run(['systemctl', '--user', 'show', '--property=ActiveState',
@@ -38,12 +38,12 @@ def show_status():
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='logioptions',
-        description='Options for Linux — Logitech device settings, battery tray, and Actions Ring.',
+        description='LogiOptions — Logitech device settings, battery tray, and Actions Ring.',
         epilog='Run logioptions without a command to open the app.\n'
                'Use logioptions COMMAND --help for command details.\n'
                'Commands marked Advanced access devices directly; prefer the app for everyday settings.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--version', action='version', version=f'Options for Linux {version()}')
+    parser.add_argument('--version', action='version', version=f'LogiOptions {version()}')
     commands = parser.add_subparsers(dest='command', title='commands', metavar='COMMAND')
     commands.add_parser('gui', help='Open the app (default)')
     commands.add_parser('status', help='Show background services and latest device readings')

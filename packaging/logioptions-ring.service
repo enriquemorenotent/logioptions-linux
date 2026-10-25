@@ -1,5 +1,5 @@
 [Unit]
-Description=Options for Linux background Actions Ring
+Description=LogiOptions background Actions Ring
 PartOf=graphical-session.target
 After=graphical-session.target
 ConditionPathExists=/usr/bin/logioptions

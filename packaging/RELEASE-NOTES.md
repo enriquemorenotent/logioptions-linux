@@ -1,14 +1,18 @@
-Options for Linux 0.1.4 for Ubuntu 26.04 amd64 with GNOME 50.
+LogiOptions 0.1.5 for Ubuntu 26.04 amd64 with GNOME 50.
 
-GitHub Pages is now the sole active APT repository. The setup command installs
-the signed repository and migrates the former PPA:
+Renames the displayed application to LogiOptions in the launcher, window,
+tray, and command-line help. The package remains `logioptions-linux` and
+its command remains `logioptions`. Existing settings and startup preferences
+are preserved.
+
+Upgrade through the GitHub Pages APT repository:
 
 ```sh
-curl -fsSL https://enriquemorenotent.github.io/logioptions-linux/install.sh | sudo bash
+sudo apt update
+sudo apt install --only-upgrade logioptions-linux
 ```
 
-Includes Quit in the tray, improved CLI help, --version, status, configurable
-login startup, and device visuals. Saved settings stay in place.
+Close and reopen the app after upgrading to see the new name.
 
 Third-party artwork and fonts are not GPL-licensed. Their owners retain all
 rights; redistribution permission has not been obtained. See assets/logitech/NOTICE.txt.

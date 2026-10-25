@@ -11,7 +11,7 @@ working_directory = str(project).replace('%', '%%')
 units = Path.home() / '.config/systemd/user'
 units.mkdir(parents=True, exist_ok=True)
 (units / 'logioptions-ring.service').write_text(
-    '[Unit]\nDescription=Options for Linux background Actions Ring\n'
+    '[Unit]\nDescription=LogiOptions background Actions Ring\n'
     'PartOf=graphical-session.target\nAfter=graphical-session.target\n\n'
     '[Service]\nType=simple\n'
     f'WorkingDirectory={working_directory}\n'
@@ -19,7 +19,7 @@ units.mkdir(parents=True, exist_ok=True)
     'Restart=on-failure\nRestartSec=3\nTimeoutStopSec=45\n\n'
     '[Install]\nWantedBy=graphical-session.target\n')
 (units / 'logioptions-tray.service').write_text(
-    '[Unit]\nDescription=Options for Linux tray icon\n'
+    '[Unit]\nDescription=LogiOptions tray icon\n'
     'PartOf=graphical-session.target\nAfter=graphical-session.target\n\n'
     '[Service]\nType=simple\n'
     f'WorkingDirectory={working_directory}\n'

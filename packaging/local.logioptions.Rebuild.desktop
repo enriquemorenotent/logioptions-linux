@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Options for Linux
+Name=LogiOptions
 Comment=Logitech device controls and Actions Ring
 Exec=logioptions gui
 Icon=logioptions-symbolic

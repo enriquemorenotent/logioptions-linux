@@ -24,7 +24,7 @@ class Tray:
         self.indicator = AyatanaAppIndicator3.Indicator.new('logioptions-linux',
             'logioptions-symbolic', AyatanaAppIndicator3.IndicatorCategory.HARDWARE)
         self.indicator.set_icon_theme_path(str(PROJECT / 'assets'))
-        self.indicator.set_title('Options for Linux')
+        self.indicator.set_title('LogiOptions')
         self.icon_state = None
         self.indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
         self.busy = False
@@ -78,7 +78,7 @@ class Tray:
             return False
         reason = warning_reason(state)
         icon_state = ('logioptions-warning-symbolic' if reason else 'logioptions-symbolic',
-                      reason or 'Options for Linux')
+                      reason or 'LogiOptions')
         if self.icon_state != icon_state:
             self.indicator.set_icon_full(*icon_state)
             self.icon_state = icon_state

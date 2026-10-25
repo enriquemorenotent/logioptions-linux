@@ -37,7 +37,7 @@ def box(vertical=True, spacing=12):
 
 class OptionsWindow(Presentation, Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title='Options for Linux', default_width=1280, default_height=820)
+        super().__init__(application=app, title='LogiOptions', default_width=1280, default_height=820)
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.closed = False
         self.ring_ready = ring_available()
@@ -90,7 +90,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         toggle = Adw.SwitchRow(title='Start automatically when I log in',
             subtitle='Starts the background service and tray icon without opening a window.',
             active=enabled())
-        note = Adw.ActionRow(title='When turned off, open Options for Linux after login to use the Actions Ring.',
+        note = Adw.ActionRow(title='When turned off, open LogiOptions after login to use the Actions Ring.',
                             title_lines=3)
         def changed(row, _):
             try:

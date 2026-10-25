@@ -27,7 +27,7 @@ def set_enabled(value):
     previous = path.read_bytes() if path.exists() else None
     path.parent.mkdir(parents=True, exist_ok=True)
     command = 'logioptions session' if shutil.which('logioptions') else 'systemctl --user start ' + ' '.join(UNITS)
-    content = ('[Desktop Entry]\nType=Application\nName=Options for Linux background services\n'
+    content = ('[Desktop Entry]\nType=Application\nName=LogiOptions background services\n'
                f'Exec={command}\nOnlyShowIn=GNOME;\nNoDisplay=true\n'
                f'Hidden={str(not value).lower()}\n')
     temporary = path.with_suffix('.desktop.tmp')

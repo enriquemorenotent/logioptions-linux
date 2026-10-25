@@ -1,4 +1,4 @@
-# Options for Linux
+# LogiOptions
 
 **Your Logitech mouse. More at home on Linux.**
 
@@ -6,7 +6,7 @@ A native Linux app bringing familiar Options+ controls to your desktop—startin
 with the MX Master 4. Adjust how your mouse feels, tune its scrolling, and explore
 haptic feedback from one place.
 
-![Options for Linux showing MX Master 4 button controls](docs/screenshots/mx-master-4-window.png)
+![LogiOptions showing MX Master 4 button controls](docs/screenshots/mx-master-4-window.png)
 
 *The native GTK app. Device artwork and fonts come from Logitech Options+;
 these third-party assets are separate from the GPL-licensed application code.*
@@ -52,7 +52,7 @@ Install with automatic updates:
 curl -fsSL https://enriquemorenotent.github.io/logioptions-linux/install.sh | sudo bash
 ```
 
-Open **Options for Linux** from the app launcher. **Log out of Ubuntu and back in**
+Open **LogiOptions** from the app launcher. **Log out of Ubuntu and back in**
 after first-time setup to load Actions Ring. The tray and background service then
 start at login; you can close the settings window and keep using the ring.
 

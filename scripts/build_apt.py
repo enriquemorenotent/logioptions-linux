@@ -46,13 +46,13 @@ sha=hashlib.sha256(package.read_bytes()).hexdigest()
 (root/'dist/SHA256SUMS').write_text(f'{sha}  {package.name}\n')
 (pages/'.nojekyll').touch()
 shutil.copyfile(root/'scripts/setup_repository.sh', pages/'install.sh')
-(pages/'index.html').write_text(f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Options for Linux</title>
+(pages/'index.html').write_text(f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>LogiOptions</title>
 <style>body{{font:18px system-ui;max-width:760px;margin:64px auto;padding:0 24px;background:#faf9ff;color:#242627}}h1{{font-size:48px}}a{{color:#7040dc}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#eeebf4;padding:20px;border-radius:12px;font-size:14px}}</style>
-<h1>Options for Linux</h1><p>Native Logitech device controls, a battery tray, and Actions Ring.</p>
+<h1>LogiOptions</h1><p>Native Logitech device controls, a battery tray, and Actions Ring.</p>
 <p>Experimental release {html.escape(version)} for Ubuntu 26.04 amd64 with GNOME 50. Independent project; not affiliated with Logitech. Includes third-party device artwork and fonts; see the release asset notices.</p>
 <p><a href="https://github.com/enriquemorenotent/logioptions-linux/releases/tag/v{version}">Download the .deb</a> · <a href="https://github.com/enriquemorenotent/logioptions-linux">Project and help</a></p>
 <h2>Install with updates</h2><pre>curl -fsSL https://enriquemorenotent.github.io/logioptions-linux/install.sh | sudo bash</pre>
 <p>This configures our signed GitHub Pages repository and installs the app. It also migrates the former Launchpad PPA. <a href="install.sh">Review the setup script</a>.</p>
 <h2>Already using the PPA?</h2><p>Run the same setup command once. Your settings are preserved; future updates arrive through normal APT upgrades. The PPA no longer receives releases.</p>
-<p>Signing-key fingerprint: <code>{key}</code></p><p>Open Options for Linux after installation. The extension needs a logout/login on first installation. Later updates use normal APT upgrades; extension changes may also need a new login.</p></html>''')
+<p>Signing-key fingerprint: <code>{key}</code></p><p>Open LogiOptions after installation. The extension needs a logout/login on first installation. Later updates use normal APT upgrades; extension changes may also need a new login.</p></html>''')
 print('Signed repository:',apt)

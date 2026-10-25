@@ -63,4 +63,4 @@ def main(login=True):
                         'logioptions-ring.service','logioptions-tray.service'],check=True)
         marker.parent.mkdir(parents=True,exist_ok=True)
         marker.write_text(version+'\n')
-        print('Options for Linux background services activated. A new extension needs a new login session.')
+        print('LogiOptions background services activated. A new extension needs a new login session.')

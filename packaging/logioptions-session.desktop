@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Options for Linux background services
+Name=LogiOptions background services
 Exec=logioptions session
 OnlyShowIn=GNOME;
 NoDisplay=true

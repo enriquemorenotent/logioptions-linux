@@ -22,7 +22,7 @@ applications = Path.home() / '.local/share/applications'
 applications.mkdir(parents=True, exist_ok=True)
 project = str(source.parents[1])
 (applications / 'local.logioptions.Rebuild.desktop').write_text(
-    '[Desktop Entry]\nType=Application\nName=Options for Linux\n'
+    '[Desktop Entry]\nType=Application\nName=LogiOptions\n'
     'Comment=Logitech device controls and Actions Ring\n'
     f'Path={project}\nExec=/usr/bin/python3 -m logioptions gui\n'
     'Icon=input-mouse\nTerminal=false\nCategories=Settings;HardwareSettings;\n')

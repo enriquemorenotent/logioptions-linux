@@ -72,7 +72,7 @@ jobs:
         run: |
           version=$(cat VERSION)
           gh release create "v$version" dist/*.deb dist/SHA256SUMS --target "$GITHUB_SHA" \
-            --title "Options for Linux $version" --notes-file packaging/RELEASE-NOTES.md --prerelease
+            --title "LogiOptions $version" --notes-file packaging/RELEASE-NOTES.md --prerelease
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

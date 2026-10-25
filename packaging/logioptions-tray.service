@@ -1,5 +1,5 @@
 [Unit]
-Description=Options for Linux tray icon
+Description=LogiOptions tray icon
 PartOf=graphical-session.target
 After=graphical-session.target
 ConditionPathExists=/usr/bin/logioptions
