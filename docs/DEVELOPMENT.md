@@ -166,9 +166,11 @@ Pages setup instructions to opt into updates.
 
 The project code is GPL-3.0-only. `LICENSE` and `packaging/copyright` are included
 in both package formats. The PPA is `ppa:enriquemorenotent-gmail/logioptions-linux`. Launchpad builds
-packages from signed source uploads for Ubuntu Resolute. The first build succeeded,
-but initial archive signing and publication are pending; installation from this
-PPA has not been verified yet.
+packages from signed source uploads for Ubuntu Resolute. Version
+`0.1.0-0ubuntu1~ppa1` is published. Adding the PPA and installing the package were
+verified in a clean Ubuntu 26.04 container, including signature verification,
+dependency installation, CLI startup, and the installed service/extension files.
+This container check does not test a graphical login or physical devices.
 
 With Debian packaging tools (`build-essential`, `debhelper`, `dpkg-dev`, Python 3,
 and Node.js for the protocol/profile tests), prepare a source-only upload:

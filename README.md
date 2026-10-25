@@ -47,30 +47,24 @@ still unfinished.
 **Requires Ubuntu 26.04 (amd64) with GNOME 50.** The package includes the tray,
 background service, GNOME extension, and device-access rules. Solaar is not required.
 
-**Install now:** download the `.deb` from
-[GitHub Releases](https://github.com/enriquemorenotent/logioptions-linux/releases)
-and open it with Ubuntu’s software installer.
-
-Open **Options for Linux** from the app launcher. **Log out of Ubuntu and back in**
-after first-time setup to load Actions Ring. The tray and background service then
-start at login; you can close the settings window and keep using the ring.
-
-### Install with automatic package updates — coming shortly
-
-**The PPA is not ready yet.** Launchpad has built the package, but its initial
-repository signing key and publication are still pending. The commands below
-are the planned installation method; they have not passed the installation check yet.
-Check the [PPA status](https://launchpad.net/~enriquemorenotent-gmail/+archive/ubuntu/logioptions-linux)
-for publication progress.
+Install with automatic updates:
 
 ```bash
 sudo add-apt-repository ppa:enriquemorenotent-gmail/logioptions-linux
 sudo apt install logioptions-linux
 ```
 
-Once available and added, this PPA will provide updates through Ubuntu’s normal
-package updates. Installing the downloaded `.deb` alone does not add an update
-repository.
+Open **Options for Linux** from the app launcher. **Log out of Ubuntu and back in**
+after first-time setup to load Actions Ring. The tray and background service then
+start at login; you can close the settings window and keep using the ring.
+
+Updates arrive through Ubuntu’s normal package updates.
+[View the PPA](https://launchpad.net/~enriquemorenotent-gmail/+archive/ubuntu/logioptions-linux).
+
+Alternatively, download the `.deb` from
+[GitHub Releases](https://github.com/enriquemorenotent/logioptions-linux/releases)
+and open it with Ubuntu’s software installer. Installing the downloaded `.deb`
+alone does not add an update repository.
 
 **[Setup and development guide →](docs/DEVELOPMENT.md)**
 
