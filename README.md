@@ -42,14 +42,43 @@ works in the tested GNOME desktop session, including after a restart.
 Broader device profiles, Flow, macros, keyboard customization, and full Actions Ring parity are
 still unfinished.
 
-Development currently targets Ubuntu 26.04, with GNOME 50 for the Actions Ring.
-Install **`logioptions-linux`** from our [APT repository](https://enriquemorenotent.github.io/logioptions-linux/)
-for normal Ubuntu package updates, or download the `.deb` from
-[GitHub Releases](https://github.com/enriquemorenotent/logioptions-linux/releases).
-The experimental package currently targets Ubuntu 26.04 amd64 with GNOME 50.
-It includes the tray, background service, GNOME extension, and device-access rules;
-Solaar is not required. Open **Options for Linux** after installing. First-time
-extension setup requires logging out and back in.
+### Install on Ubuntu
+
+**Requires Ubuntu 26.04 (amd64) with GNOME 50.** The package includes the tray,
+background service, GNOME extension, and device-access rules. Solaar is not required.
+
+Add our signed APT repository once, then install:
+
+```bash
+curl -fsSLo /tmp/logioptions-linux-keyring.gpg https://enriquemorenotent.github.io/logioptions-linux/apt/logioptions-linux-archive-keyring.gpg
+sudo install -m 644 /tmp/logioptions-linux-keyring.gpg /usr/share/keyrings/logioptions-linux-archive-keyring.gpg
+curl -fsSLo /tmp/logioptions-linux.sources https://enriquemorenotent.github.io/logioptions-linux/apt/logioptions-linux.sources
+sudo install -m 644 /tmp/logioptions-linux.sources /etc/apt/sources.list.d/logioptions-linux.sources
+sudo apt update
+sudo apt install logioptions-linux
+```
+
+Open **Options for Linux** from the app launcher. **Log out of Ubuntu and back in**
+after first-time setup to load Actions Ring. The tray and background service then
+start at login; you can close the settings window and keep using the ring.
+
+Updates arrive through Ubuntu’s normal package updates. To update manually:
+
+```bash
+sudo apt update
+sudo apt install --only-upgrade logioptions-linux
+```
+
+Prefer a direct download? Get the `.deb` from
+[GitHub Releases](https://github.com/enriquemorenotent/logioptions-linux/releases),
+open a terminal in its download folder, and run:
+
+```bash
+sudo apt install ./logioptions-linux_0.1.0_all.deb
+```
+
+Use the filename of the version you downloaded. Installing the `.deb` alone does
+not add the update repository; use the APT setup above for future updates.
 
 **[Setup and development guide →](docs/DEVELOPMENT.md)**
 
