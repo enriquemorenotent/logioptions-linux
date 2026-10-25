@@ -95,3 +95,11 @@ and [feature coverage](research/COVERAGE.md).
 
 Independent project. Not affiliated with or endorsed by Logitech. Official
 installers, extracted asset files, and private hardware captures are not bundled.
+
+## License
+
+Copyright © 2026 Enrique Moreno Tent and contributors. The original application
+code, packaging, tests, and original icons are licensed under
+[GNU GPL version 3 only](LICENSE) (`GPL-3.0-only`). This license does not cover
+Logitech trademarks or third-party artwork shown in screenshots. Extracted
+Logitech assets are not included in the source or binary packages.

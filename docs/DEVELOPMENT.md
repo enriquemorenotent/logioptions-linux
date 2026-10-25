@@ -161,3 +161,31 @@ LOGIOPTIONS_APT_GPG_PRIVATE_KEY, and LOGIOPTIONS_APT_GPG_PASSPHRASE.
 The signing key is separate from Pulsete's. Unsigned repository builds fail.
 Installing a downloaded `.deb` does not silently add an APT source; follow the
 Pages setup instructions to opt into updates.
+
+### Launchpad PPA source builds
+
+The project code is GPL-3.0-only. `LICENSE` and `packaging/copyright` are included
+in both package formats. The PPA is not published yet; do not advertise a `ppa:`
+installation command until Launchpad has accepted, built, and published it.
+
+With Debian packaging tools (`build-essential`, `debhelper`, `dpkg-dev`, Python 3,
+and Node.js for the protocol/profile tests), prepare a source-only upload:
+
+```bash
+python3 scripts/build_source.py --maintainer 'Your Name <your-verified-launchpad-email>'
+```
+
+This creates a source upload under `dist/ppa`, using an explicit source allowlist.
+Private captures, extracted artwork, screenshots, keys, and Git history are not
+included. Launchpad rebuilds the binary using `packaging/ppa/rules` and the same
+payload staging code used by the standalone `.deb` builder. The local source
+build is unsigned; publication requires a registered Launchpad signing key:
+
+```bash
+debsign -k YOUR_REGISTERED_KEY dist/ppa/*_source.changes
+dput ppa:YOUR_LAUNCHPAD_ACCOUNT/logioptions-linux dist/ppa/*_source.changes
+```
+
+Use the exact `.changes` filename when multiple versions are present. Confirm
+the corresponding source and binary publication on Launchpad before changing
+public installation instructions. Existing GitHub releases remain available.
