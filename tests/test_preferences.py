@@ -68,3 +68,30 @@ class PreferencesTests(unittest.TestCase):
             work=Mock()
             with self.assertRaises(RuntimeError): p.apply_and_remember(device,descriptor,'dpi',work)
             work.assert_not_called()
+
+    def test_off_is_saved_after_disabled_readback_and_stays_off(self):
+        from logioptions.device import Device
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ,XDG_CONFIG_HOME=directory):
+            before = dict(enabled=True,mode=3,modes=[255,1,3],options=29,level=1,
+                          max_level=7,hands_out=5,hands_in=10,powered=60)
+            after = dict(before,enabled=False,level=0)
+            descriptor = dict(identity='keyboard',backlight=before)
+            p.save('keyboard',{'backlight':dict(mode=3,level=1,hands_out=5,hands_in=10,powered=60)})
+            device = Device(Mock(),1)
+            device.identity = Mock(return_value='keyboard')
+            device.backlight = Mock(side_effect=[before,after])
+            device.request = Mock()
+            def apply(d):
+                descriptor['backlight']=d.set_backlight(255,1,5,10,60)
+            p.apply_and_remember(device,descriptor,'backlight',apply)
+            saved = p.load()['devices']['keyboard']
+            self.assertEqual(saved['backlight']['mode'],255)
+            # Inactive firmware fields may drift; avoid rewriting a disabled light.
+            restored = Mock()
+            restored.backlight.return_value=dict(after,mode=1,hands_in=25)
+            self.assertEqual(p.restore(restored,saved),[])
+            restored.set_backlight.assert_not_called()
+            # If it actually enables itself, restore Off, never the old Manual setting.
+            restored.backlight.return_value=before
+            self.assertEqual(p.restore(restored,saved),['backlight'])
+            self.assertEqual(restored.set_backlight.call_args.kwargs['mode'],255)

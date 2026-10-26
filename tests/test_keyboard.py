@@ -38,3 +38,21 @@ class KeyboardTests(unittest.TestCase):
             with self.assertRaises(ValueError): d.set_backlight(*args)
         d.request.assert_not_called()
         with self.assertRaises(ValueError): d.set_backlight(3,2,5,10,60)
+
+    def test_off_accepts_inactive_values_reset_by_keyboard(self):
+        d = Device(Mock(),1)
+        before = dict(enabled=True,mode=3,modes=[255,1,3],options=29,level=1,
+                      max_level=7,hands_out=5,hands_in=10,powered=60)
+        after = dict(before,enabled=False,mode=1,level=0,hands_out=10,hands_in=20,powered=120)
+        d.backlight = Mock(side_effect=[before,after])
+        d.request = Mock()
+        self.assertFalse(d.set_backlight(255,1,5,10,60)['enabled'])
+        self.assertEqual(d.request.call_args.args[2][0],0)
+
+    def test_off_rejects_keyboard_that_remains_enabled(self):
+        d = Device(Mock(),1)
+        before = dict(enabled=True,mode=3,modes=[255,1,3],options=29,level=1,
+                      max_level=7,hands_out=5,hands_in=10,powered=60)
+        d.backlight = Mock(return_value=before)
+        d.request = Mock()
+        with self.assertRaises(ValueError): d.set_backlight(255,1,5,10,60)

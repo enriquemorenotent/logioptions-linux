@@ -1,9 +1,9 @@
-LogiOptions 0.1.5 for Ubuntu 26.04 amd64 with GNOME 50.
+LogiOptions 0.1.6 for Ubuntu 26.04 amd64 with GNOME 50.
 
-Renames the displayed application to LogiOptions in the launcher, window,
-tray, and command-line help. The package remains `logioptions-linux` and
-its command remains `logioptions`. Existing settings and startup preferences
-are preserved.
+Fixes keyboard backlight Off failing to save when the keyboard resets inactive
+brightness, mode, or delay values. Off now verifies the disabled state and
+replaces the saved setting, so the background service cannot restore an older
+Manual preference. Already disabled backlights are left alone during restoration.
 
 Upgrade through the GitHub Pages APT repository:
 
@@ -12,7 +12,7 @@ sudo apt update
 sudo apt install --only-upgrade logioptions-linux
 ```
 
-Close and reopen the app after upgrading to see the new name.
+Quit and reopen LogiOptions after upgrading. No new login is required for this fix.
 
 Third-party artwork and fonts are not GPL-licensed. Their owners retain all
 rights; redistribution permission has not been obtained. See assets/logitech/NOTICE.txt.

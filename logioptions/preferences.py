@@ -84,6 +84,9 @@ def restore(device, settings):
             device.set_fn_mode(desired)
         elif key == 'backlight':
             state = device.backlight()
+            # Off is the enable bit, independent of inactive firmware values.
+            if value['mode'] == 255 and not state['enabled']:
+                continue
             current = dict(mode=state['mode'] if state['enabled'] else 255,
                            **{k:state[k] for k in ('level','hands_out','hands_in','powered')})
             # The sensor controls brightness in automatic mode.

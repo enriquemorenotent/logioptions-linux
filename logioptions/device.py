@@ -113,7 +113,11 @@ class Device:
                               level if selected == 3 else 0, *(t // 5 for t in times))
         self.request(0x1982, 1, payload)
         actual = self.backlight()
-        if (actual['enabled'] != (mode != 255) or actual['mode'] != selected or
+        # Firmware may reset brightness, mode, or timers while disabled. Those
+        # inactive values must not reject Off and prevent it from being saved.
+        if actual['enabled'] != (mode != 255):
+            raise ValueError('Keyboard did not accept the backlight settings')
+        if mode != 255 and (actual['mode'] != selected or
                 [actual[k] for k in ('hands_out', 'hands_in', 'powered')] != times or
                 (selected == 3 and actual['level'] != level)):
             raise ValueError('Keyboard did not accept the backlight settings')
