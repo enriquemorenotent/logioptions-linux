@@ -15,12 +15,15 @@ these third-party assets are separate from the GPL-licensed application code.*
 
 - **Pointer speed:** adjust your mouse’s DPI.
 - **Scrolling:** control wheel mode and SmartShift, plus vertical and thumb-wheel direction.
-- **Buttons:** inspect and change supported button mappings.
+- **Buttons:** assign common shortcuts, recorded keyboard shortcuts, desktop actions,
+  or Actions Ring to supported mouse buttons, alongside hardware remapping.
+  See each assignment directly on the mouse image.
 - **Haptics:** adjust vibration strength and feel a preview.
 - **Keyboard:** choose F1–F12 or media keys, and adjust MX Keys for Business backlighting.
 - **Tray access:** reopen settings, see both batteries, and check background service status from the top bar.
 - **Remembered settings:** applied changes are saved and restored by the background service.
-- **Device status:** see your connected devices and battery levels.
+- **Device status:** distinguish responding, unavailable, and disconnected devices,
+  with clearly marked last battery readings.
 - **Actions Ring:** an experimental GNOME extension for shortcuts at your thumb,
   with a background listener that starts at login—even with the app closed.
 - **Per-app rings:** choose eight actions for each app, with an All apps fallback.

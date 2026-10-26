@@ -3,11 +3,15 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
+import {validateButtonAction} from './buttons.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {selectProfile} from './profiles.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const XML = `<node><interface name="local.logioptions.Ring">
+<method name="ButtonVersion"><arg type="u" direction="out"/></method>
+<method name="ExecuteButton"><arg type="s" direction="in"/></method>
 <method name="ProfileVersion"><arg type="u" direction="out"/></method>
 <method name="ListApplications"><arg type="s" direction="out"/></method>
 <method name="Show"/><method name="Release"/><method name="Hide"/>
@@ -29,6 +33,45 @@ export default class ActionsRing extends Extension {
         this._session = Main.sessionMode.connect('updated', () => this.Hide());
     }
     Ping() { return 'ready'; }
+    ButtonVersion() { return 1; }
+    ExecuteButton(payload) {
+        if (typeof payload !== 'string' || payload.length > 2048) throw new Error('Invalid button action');
+        const action = validateButtonAction(JSON.parse(payload));
+        if (Main.sessionMode.isLocked || Main.sessionMode.isGreeter) return;
+        if (action.type === 'ring') { this.Show(); return; }
+        // Do not send underlying button shortcuts through an open modal ring.
+        if (this._overlay) return;
+        if (action.type === 'desktop') {
+            const workspace = global.workspace_manager.get_active_workspace();
+            if (action.action === 'overview') Main.overview.toggle();
+            else if (action.action === 'show_desktop') {
+                for (const window of workspace.list_windows())
+                    if (window.can_minimize()) window.minimize();
+            } else {
+                const direction = action.action === 'workspace_left' ? Meta.MotionDirection.LEFT : Meta.MotionDirection.RIGHT;
+                workspace.get_neighbor(direction).activate(global.get_current_time());
+            }
+            return;
+        }
+        if (!global.display.focus_window) return;
+        const values = action.keys.map(key => Clutter[`KEY_${key}`]);
+        if (values.some(value => !Number.isInteger(value) || value <= 0)) throw new Error('Unknown shortcut key');
+        const pressed = [];
+        const now = GLib.get_monotonic_time();
+        try {
+            for (const value of values) {
+                pressed.push(value);
+                this._keyboard.notify_keyval(now, value, Clutter.KeyState.PRESSED);
+            }
+        } finally {
+            let releaseError = null;
+            for (const value of pressed.reverse()) {
+                try { this._keyboard.notify_keyval(now, value, Clutter.KeyState.RELEASED); }
+                catch (error) { releaseError ??= error; }
+            }
+            if (releaseError) throw releaseError;
+        }
+    }
     ProfileVersion() { return 1; }
     ListApplications() {
         const tracker = Shell.WindowTracker.get_default();

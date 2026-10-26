@@ -171,3 +171,78 @@ preserves application preferences. Use `--repository-only` to configure sources
 without installing or upgrading the application.
 
 Historical source-package tooling remains in `scripts/build_source.py`.
+
+### Global mouse button actions
+
+The Button actions panel supports hardware remapping and host actions on controls
+that advertise HID++ diversion. Primary clicks remain protected. Shortcuts can be
+recorded with modifiers; desktop choices include overview, show desktop, and
+workspace navigation. Assignments apply to all apps and are stored atomically
+in `$XDG_CONFIG_HOME/logioptions/button-actions.json`, keyed by device identity.
+Per-app direct button assignments are not implemented.
+
+The existing receiver listener handles ring and shortcut events together. It
+reloads assignments during maintenance, restores removed diversions, rearms them
+after a mouse reset, and restores each captured control on exit. Only the selected
+mouse is listened to; simultaneous listeners for multiple mice remain unsupported.
+GNOME executes actions through the extension's versioned D-Bus endpoint and
+refuses input on locked/greeter sessions. Older loaded extensions do not enable
+custom diversion. Installing the updated extension needs a new login once;
+assignment edits after that do not require logging out.
+
+Regression checks cover storage, dispatch, duplicate held reports, live assignment
+changes while held, receiver-slot identity changes, restoration,
+locked-session handling, extension validation, and the native shortcut recorder.
+Physical shortcut/desktop execution still needs verification after loading the
+updated extension; synthetic tests do not establish hardware success.
+
+### Device availability and last readings
+
+The existing receiver owner publishes device identity, last response time,
+last successful battery time, and availability in the runtime status cache.
+It retains known devices across rediscovery. A silent device is labelled
+“Not responding · may be asleep”; only a missing receiver or confirmed slot
+replacement is labelled disconnected. Stale cache data is labelled out of date.
+The tray and GUI use the same formatter, and low-battery warnings require a
+recent response and a recent valid percentage.
+
+The GUI refreshes status labels from the cache every five seconds without adding
+another receiver reader. Explicit discovery keeps missing devices visible with
+read-only settings, and successful rediscovery restores controls. Battery ages
+are preserved when identity succeeds but a battery query fails. Runtime history
+is cleared at logout, and the app does not claim to distinguish sleep from being
+out of range.
+
+### Background status in App settings
+
+The Background status section checks the listener and tray systemd units,
+the GNOME extension endpoints, and recent cached device replies. Checks run
+on a worker, refresh every ten seconds while the dialog is open, and stop
+updating when it closes. They never acquire the receiver or inject input.
+An older loaded extension is distinguished from a disabled or failed extension.
+
+Restart background service explicitly restarts `logioptions-ring.service`,
+then reads its status again. It leaves tray ownership, saved preferences,
+and login startup settings alone. Errors are reported in the dialog, and a
+restart is only described as successful when the following check reports Running.
+
+### Assignment summaries on the mouse image
+
+The Buttons view shows each saved host action beneath its physical button name.
+Common shortcuts include their readable action name and key combination; custom
+shortcuts show their keys. When no host override exists, the displayed assignment
+comes from the device's hardware reporting, with Actions Ring as the thumb-pad
+default. Unknown readbacks are labelled unavailable rather than guessed.
+Clicking a callout still selects that physical button in the editor. Applying an
+assignment rebuilds the summaries from the saved configuration.
+
+### Mouse callout placement
+
+Button callouts use two lanes ordered by their physical target heights. Each
+label has a separate leader line to its target circle, and hover, focus, and
+selection highlight the corresponding circle and line. The horizontal wheel
+also has its own target. Label heights are measured and allocated explicitly
+so wrapped assignments stay separate. The diagram scales within the available
+canvas when the settings drawer is open; the mouse texture stays mapped while
+resizing or switching views. Layout tests check label bounds and overlap, and
+native GTK tests verify that lines meet dot centers and labels leave dots visible.

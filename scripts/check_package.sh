@@ -18,4 +18,4 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/usr/lib/logioptions-linux /usr/bin/python3
 sandbox=$(mktemp -d)
 XDG_CONFIG_HOME="$sandbox/config" XDG_DATA_HOME="$sandbox/data" XDG_CACHE_HOME="$sandbox/cache" XDG_RUNTIME_DIR="$sandbox" \
 LOGIOPTIONS_ISOLATED_GUI_TEST=1 GDK_BACKEND=x11 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/usr/lib/logioptions-linux \
-xvfb-run -a dbus-run-session -- /usr/bin/python3 -m unittest discover -s /src/tests -p test_dpi_ui.py -v
+xvfb-run -a dbus-run-session -- /usr/bin/python3 -m unittest discover -s /src/tests -p "test_*ui.py" -v

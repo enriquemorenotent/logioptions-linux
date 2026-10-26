@@ -45,8 +45,10 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         self.devices = []
         self.selected = 0
         self.connect('close-request', self.on_close)
+        self.device_status_labels = []
         self.build_shell()
         self.refresh()
+        GLib.timeout_add_seconds(5, self.refresh_device_status)
 
     def on_close(self, *_):
         self.closed = True
@@ -84,7 +86,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
     def show_app_settings(self):
         from .autostart import enabled, set_enabled
         dialog = Adw.PreferencesWindow(transient_for=self, modal=True, title='App settings',
-                                       default_width=560, default_height=300, search_enabled=False)
+                                       default_width=620, default_height=680, search_enabled=False)
         page = Adw.PreferencesPage()
         group = Adw.PreferencesGroup(title='Startup')
         toggle = Adw.SwitchRow(title='Start automatically when I log in',
@@ -105,8 +107,11 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         group.add(toggle)
         group.add(note)
         page.add(group)
+        from .health_ui import add as add_background_status
+        add_background_status(self, dialog, page)
         dialog.add(page)
         dialog.present()
+        return dialog
 
     def show_ring_profiles(self):
         from .profile_ui import ProfileWindow
@@ -120,12 +125,38 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
         except (ValueError, OSError) as error:
             self.status.set_text(f'Cannot open ring profiles: {error}')
 
+    def refresh_device_status(self):
+        if self.closed:
+            return False
+        if self.busy:
+            return True
+        from .device_status import for_device, read_rows
+        rows = read_rows()
+        for descriptor, widget in self.device_status_labels:
+            widget.set_text(for_device(descriptor,rows=rows)['text'])
+        if self.devices:
+            if self.home:
+                connected = sum(for_device(d,rows=rows)['state']=='connected' for d in self.devices)
+                self.connection_label.set_text(f'{connected} connected · {len(self.devices)} known')
+            else:
+                status = for_device(self.devices[self.selected],rows=rows)
+                self.connection_label.set_text(status['text'])
+                if self.devices[self.selected].get('_missing') and getattr(self,'device_notice',None):
+                    self.device_notice.set_text('The device is responding. Refresh to reload its settings.' if status['state']=='connected'
+                                                else 'Wake the device or reconnect it, then refresh to load its settings.')
+                for name, card in self.cards.items():
+                    if name != 'Device status': card.set_sensitive(status['state']=='connected')
+        return True
+
     def refresh(self):
         self.run(discover, self.got_devices, 'Reading connected devices…')
 
     def got_devices(self, result):
         was_home = self.home
         devices, errors = result
+        responding = len(devices)
+        from .device_status import merge_devices, for_device
+        devices = merge_devices(devices,self.devices)
         old_key = self.devices[self.selected]['key'] if self.devices and self.selected < len(self.devices) else None
         self.devices = devices
         self.device_list.remove_all()
@@ -133,13 +164,13 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
             row = box(spacing=4)
             row.append(label(device['name']))
             battery = device.get('battery', {}).get('percentage')
-            row.append(label(f'{battery}% battery' if battery is not None else 'Connected', 'muted'))
+            row.append(label(for_device(device)['text'], 'muted'))
             self.device_list.append(row)
         if devices:
             self.selected = next((i for i, d in enumerate(devices) if d['key'] == old_key),
                                  next((i for i, d in enumerate(devices) if 'dpi' in d), 0))
             self.device_list.select_row(self.device_list.get_row_at_index(self.selected))
-            self.status.set_text(f"{len(devices)} device{'s' if len(devices) != 1 else ''} connected")
+            self.status.set_text(f"{responding} device{'s' if responding != 1 else ''} responding · {len(devices)} known")
             if errors:
                 self.status.set_text('; '.join(errors))
             if was_home:
@@ -156,6 +187,7 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
             self.render_device()
 
     def clear_page(self):
+        self.device_status_labels = []
         while self.page.get_first_child():
             self.page.remove(self.page.get_first_child())
 
@@ -195,6 +227,14 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
     def _build_controls(self):
         device = self.devices[self.selected]
         is_mouse = device.get('kind_code') == 3 or 'dpi' in device
+        if device.get('_missing'):
+            card = self.card('Device status')
+            message = label('Wake the device or reconnect it, then refresh to load its settings.', 'muted')
+            message.set_wrap(True)
+            self.device_notice = message
+            card.append(message)
+            card.append(self.button('Refresh devices', self.refresh, True))
+            return
         if device.get('read_errors'):
             warning = label('Some settings could not be read. Refresh to retry. ' + '; '.join(device['read_errors']), 'muted')
             warning.set_wrap(True)
@@ -359,44 +399,9 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
                 self.action(lambda d: capture_control(d, 416, ready=ready, cancelled=lambda: self.closed),
                             'Thumb pad press and release received · normal settings restored')
             card.append(self.button('Test thumb pad', test_thumb_pad))
-        sources = [c for c in controls if c['flags'] & 0x10]
-        targets = [c for c in controls if c['control_id'] in PURE_TARGETS]
-        if is_mouse and sources and targets:
-            card = self.card('Button actions')
-            source = Gtk.DropDown.new_from_strings([CONTROL_NAMES.get(c['control_id'], 'Button ' + str(c['index'] + 1)) for c in sources])
-            target = Gtk.DropDown.new_from_strings([CONTROL_NAMES[c['control_id']] for c in targets])
-            self.mapping_source = source
-            self.mapping_controls = sources
-            card.append(label('Button', 'muted'))
-            card.append(source)
-            card.append(label('Action', 'muted'))
-            card.append(target)
-            available_targets = []
-            def show_mapping(*_):
-                selected_control = sources[source.get_selected()]
-                available_targets[:] = [c for c in controls
-                    if c['group'] > 0 and selected_control['group_mask'] & (1 << (c['group'] - 1))]
-                target.set_model(Gtk.StringList.new([CONTROL_NAMES.get(c['control_id'], str(c['control_id']))
-                                                    for c in available_targets]))
-                current = selected_control.get('reporting', {}).get('remapped_to')
-                target.set_selected(next((i for i, c in enumerate(available_targets)
-                                          if c['control_id'] == current), Gtk.INVALID_LIST_POSITION))
-            source.connect('notify::selected', show_mapping)
-            show_mapping()
-            def apply_mapping():
-                cid = sources[source.get_selected()]['control_id']
-                if target.get_selected() == Gtk.INVALID_LIST_POSITION:
-                    self.status.set_text('Choose an action first')
-                    return
-                destination = available_targets[target.get_selected()]['control_id']
-                def apply(d):
-                    d.remap_control(cid, destination)
-                    actual = d.control_reporting(cid)
-                    if actual['remapped_to'] != destination:
-                        raise ValueError('The device did not accept the button action')
-                    next(c for c in sources if c['control_id'] == cid)['reporting'] = actual
-                self.action(apply, 'Button action updated', remember=f'button:{cid}')
-            card.append(self.button('Apply button action', apply_mapping))
+        if is_mouse:
+            from .button_ui import build as build_button_actions
+            build_button_actions(self, device)
         if 'fn_mode' in device:
             card = self.card('Function keys')
             choice = Gtk.DropDown.new_from_strings(['F1–F12 keys', 'Media and brightness keys'])

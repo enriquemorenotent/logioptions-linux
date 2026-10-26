@@ -5,6 +5,7 @@ Third-party visual assets have separate ownership; see assets/logitech/NOTICE.tx
 import ctypes
 from datetime import datetime
 from pathlib import Path
+from .device_status import for_device
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gdk, Gsk
@@ -34,6 +35,7 @@ button { background-image: none; box-shadow: none; text-shadow: none; }
 .callout.selected { background: #814efa; color: white; border-color: #7040dd; }
 .callout-title { font-size: 14px; font-weight: bold; }
 .callout-detail { font-size: 13px; font-weight: normal; }
+.target-dot.active { background: #814efa; }
 .target-dot { background: transparent; border: 2px solid white; border-radius: 8px; min-width: 12px; min-height: 12px; box-shadow: 0 0 2px #555; }
 .drawer { background: white; border-left: 1px solid #e4e4e4; }
 .drawer-header { background: #e1e2e3; padding: 20px 26px; font-size: 20px; font-weight: bold; }
@@ -84,6 +86,28 @@ class DeviceCanvas(Gtk.Fixed):
         # Absolute callout positions must not feed back into the window's minimum
         # size; the surrounding box gives this canvas its available space.
         return (0, 0, -1, -1)
+
+
+class ConnectorLayer(Gtk.Widget):
+    def __init__(self):
+        super().__init__(can_target=False)
+        self.lines = []
+
+    def do_snapshot(self, snapshot):
+        for record in self.lines:
+            points = record.get('points')
+            if not points:
+                continue
+            builder = Gsk.PathBuilder.new()
+            builder.move_to(*points[0])
+            for point in points[1:]: builder.line_to(*point)
+            path = builder.to_path()
+            for color, thickness in [('#fbfbfb', 4), ('#814efa' if record.get('active') else '#93859e', 1.6)]:
+                rgba = Gdk.RGBA(); rgba.parse(color)
+                stroke = Gsk.Stroke.new(thickness)
+                stroke.set_line_cap(Gsk.LineCap.ROUND)
+                stroke.set_line_join(Gsk.LineJoin.ROUND)
+                snapshot.append_stroke(path, stroke, rgba)
 
 
 class ShadowPicture(Gtk.Picture):
@@ -200,6 +224,8 @@ class Presentation:
         footer = row(16)
         footer.add_css_class('footer')
         self.connection_label = text('Connecting…', 'connection')
+        self.connection_label.set_wrap(True)
+        self.connection_label.set_max_width_chars(54)
         footer.append(self.connection_label)
         self.spinner = Gtk.Spinner()
         footer.append(self.spinner)
@@ -244,14 +270,17 @@ class Presentation:
             title.set_halign(Gtk.Align.CENTER)
             content.append(title)
             battery = device.get('battery', {}).get('percentage')
-            info = text(f'▰  {battery}%' if battery is not None else 'Connected', 'battery')
+            info = text(for_device(device)['text'], 'battery')
+            info.set_wrap(True)
+            info.set_max_width_chars(40)
+            self.device_status_labels.append((device, info))
             info.set_halign(Gtk.Align.CENTER)
             content.append(info)
             button.set_child(content)
             button.connect('clicked', lambda _, i=index: self.open_device(i))
             gallery.append(button)
         self.page.append(gallery)
-        self.connection_label.set_text(f'{len(self.devices)} devices')
+        self.refresh_device_status()
 
     def open_device(self, index):
         self.selected = index
@@ -330,13 +359,13 @@ class Presentation:
         device = self.devices[self.selected]
         self.heading.set_text(device['name'])
         self.back.set_visible(True)
-        self.global_button.set_visible(mouse and self.section not in ('haptics', 'settings'))
-        self.navigation.set_visible(mouse)
+        self.global_button.set_visible(mouse and not device.get('_missing') and self.section not in ('haptics', 'settings'))
+        self.navigation.set_visible(mouse and not device.get('_missing'))
         for key, button in self.nav_buttons.items():
             if key == self.section: button.add_css_class('active')
             else: button.remove_css_class('active')
         battery = device.get('battery', {}).get('percentage')
-        self.connection_label.set_text(f'CONNECTED  ·  {battery}%' if battery is not None else 'CONNECTED')
+        self.connection_label.set_text(for_device(device)['text'])
         mouse = device.get('kind_code') == 3 or 'dpi' in device
         if not reuse_canvas:
             self._canvas_key = canvas_key
@@ -348,19 +377,33 @@ class Presentation:
             if mouse:
                 self.overlay_picture = picture('mouse-haptic-zone.webp', 125, 219)
                 self.canvas.put(self.overlay_picture, 0, 0)
+            self.connector_layer = ConnectorLayer()
+            self.canvas.put(self.connector_layer, 0, 0)
         self.items = []
         self.callouts = []
+        self.connector_records = []
+        self.connector_layer.lines = self.connector_records
+        self.connector_layer.queue_draw()
         if self.overlay_picture:
             self.overlay_picture.set_visible(self.section == 'haptics')
-        if not mouse:
+        if device.get('_missing'):
+            self.add_callout('Device status', for_device(device)['status'], 'Device status', -.25,.45)
+        elif not mouse:
             pass  # Keyboard controls are always visible in the adjacent panel.
         elif self.section == 'buttons':
+            from .button_actions import for_device as button_assignments
+            from .button_labels import assignment_label
+            try:
+                saved = button_assignments(device.get('identity'))
+            except (OSError, ValueError):
+                saved = None
             for title, card, x, y, cid in [
-                ('Middle button','Button actions',.91,.18,82), ('Gesture button','Button actions',-.29,.35,195),
-                ('Shift wheel mode','Scroll wheel',.98,.39,196),('Forward','Button actions',.70,.47,86),
-                ('Show Actions Ring','Thumb pad',-.34,.49,416),('Horizontal scroll','Horizontal scroll',.90,.56,None),
-                ('Back','Button actions',.43,.71,83)]:
-                self.add_callout(title, '', card, x, y, cid)
+                ('Middle button','Button actions',.91,.12,82), ('Gesture button','Button actions',-.42,.28,195),
+                ('Wheel mode button','Button actions',.98,.33,196),('Forward button','Button actions',.85,.51,86),
+                ('Thumb pad','Button actions',-.42,.50,416),('Horizontal scroll','Horizontal scroll',.90,.72,None),
+                ('Back button','Button actions',.45,.88,83)]:
+                detail = (assignment_label(device,cid,saved) if saved is not None else 'Action unavailable') if cid is not None else ''
+                self.add_callout(title, detail, card, x, y, cid)
         elif self.section == 'point':
             dpi = device.get('dpi', {}).get('current')
             self.add_callout('Scroll wheel', 'Mode: ' + ('Free-spin' if device.get('smartshift',{}).get('mode_code') == 1 else 'Ratchet' if device.get('smartshift',{}).get('threshold',255) >= 50 else 'SmartShift'), 'Scroll wheel',.85,.17)
@@ -373,7 +416,9 @@ class Presentation:
         else:
             title = {'easy':'Easy-Switch', 'flow':'Flow', 'settings':'Device settings'}[self.section]
             self.add_callout(title, 'Click to view', title, -.35,.48)
-        if not mouse:
+        if device.get('_missing'):
+            self.show_panel('Device status')
+        elif not mouse:
             self.show_panel('Keyboard settings')
         self._last_size = None
         if reuse_canvas:
@@ -386,7 +431,12 @@ class Presentation:
         button.add_css_class('callout')
         content = column(3)
         content.append(text(title, 'callout-title'))
-        if detail: content.append(text(detail, 'callout-detail'))
+        if detail:
+            description = text(detail, 'callout-detail')
+            description.set_wrap(True)
+            description.set_max_width_chars(23)
+            content.append(description)
+            button.set_tooltip_text(title + ' · ' + detail)
         button.set_child(content)
         def select(_):
             self.show_panel(card, button)
@@ -397,26 +447,86 @@ class Presentation:
         self.canvas.put(button, 0, 0)
         self.items.append((button, x, y))
         self.callouts.append(button)
-        # Mark the corresponding physical control, as on the reference screen.
-        if cid is not None or card == 'Haptic feedback':
-            points = {82:(.75,.19),195:(.39,.36),196:(.80,.40),86:(.43,.47),416:(.31,.49),83:(.48,.60)}
-            dx,dy = points.get(cid,(.31,.49))
+        # Each button callout owns its dot and leader line; sharing a hover/focus
+        # highlight makes the association clear even in a dense group of buttons.
+        points = {82:(.75,.19),195:(.39,.36),196:(.80,.40),86:(.43,.47),416:(.31,.49),83:(.48,.60)}
+        point = points.get(cid)
+        if point is None and card == 'Haptic feedback': point = (.31,.49)
+        if point is None and self.section == 'buttons' and card == 'Horizontal scroll': point = (.60,.51)
+        if point is not None:
+            dx,dy = point
             dot = Gtk.Box()
             dot.add_css_class('target-dot')
             dot.set_can_target(False)
             self.canvas.put(dot,0,0)
             self.items.append((dot,dx,dy))
+            if self.section == 'buttons' and not self.devices[self.selected].get('_missing'):
+                record = {'key':len(self.connector_records),'button':button,'dot':dot,
+                          'anchor':(dx,dy),
+                          'side':'left' if cid in (195,86,416,83) else 'right',
+                          'hover':False,'focus':False,'active':False}
+                self.connector_records.append(record)
+                def highlight(*_, record=record):
+                    active = record['hover'] or record['focus'] or record['button'].has_css_class('selected')
+                    record['active'] = active
+                    if active: record['dot'].add_css_class('active')
+                    else: record['dot'].remove_css_class('active')
+                    self.connector_layer.queue_draw()
+                def hover(active, record=record):
+                    record['hover'] = active
+                    highlight(record=record)
+                def focus(active, record=record):
+                    record['focus'] = active
+                    highlight(record=record)
+                motion = Gtk.EventControllerMotion.new()
+                motion.connect('enter', lambda *_, hover=hover: hover(True))
+                motion.connect('leave', lambda *_, hover=hover: hover(False))
+                button.add_controller(motion)
+                controller = Gtk.EventControllerFocus.new()
+                controller.connect('enter', lambda *_, focus=focus: focus(True))
+                controller.connect('leave', lambda *_, focus=focus: focus(False))
+                button.add_controller(controller)
+                button.connect('notify::css-classes', highlight)
 
     def layout_canvas(self, canvas, clock):
         if canvas is not self.canvas: return False
         width, height = canvas.get_width(), canvas.get_height()
-        size = (width,height)
+        mouse = self.devices[self.selected].get('kind_code') == 3 or 'dpi' in self.devices[self.selected]
+        image_width = 308 if mouse else 580
+        image_height = 480
+        left = max(135, (width - image_width) / 2 - 15)
+        top = max(15, (height - image_height) / 2 - 12)
+        measured = []
+        if self.connector_records:
+            from .callout_layout import diagram_geometry, layout_callouts
+            for record in self.connector_records:
+                button = record['button']
+                box_width = button.measure(Gtk.Orientation.HORIZONTAL,-1)[1]
+                box_height = button.measure(Gtk.Orientation.VERTICAL,box_width)[1]
+                measured.append(dict(key=record['key'],side=record['side'],width=box_width,height=box_height))
+            left,top,image_width,image_height = diagram_geometry(measured,width,height)
+            for item,record in zip(measured,self.connector_records):
+                dot_width = record['dot'].measure(Gtk.Orientation.HORIZONTAL,-1)[1]
+                dot_height = record['dot'].measure(Gtk.Orientation.VERTICAL,dot_width)[1]
+                item['anchor'] = (record['anchor'][0]+dot_width/(2*image_width),
+                                  record['anchor'][1]+dot_height/(2*image_height))
+        size = (width,height,tuple((item['width'],item['height']) for item in measured))
         if size == self._last_size: return True
         self._last_size = size
-        image_width = 308 if self.devices[self.selected].get('kind_code') == 3 or 'dpi' in self.devices[self.selected] else 580
-        left = max(135, (width - image_width) / 2 - 15)
-        top = max(15, (height - 480) / 2 - 12)
+        self.device_picture.set_size_request(round(image_width),round(image_height))
         canvas.move(self.device_picture, left, top)
         if self.overlay_picture: canvas.move(self.overlay_picture, left + 21, top + 195)
-        for widget,x,y in self.items: canvas.move(widget, left+x*308, top+y*480)
+        factor_x,factor_y = (image_width,image_height) if self.connector_records else (308,480)
+        for widget,x,y in self.items: canvas.move(widget, left+x*factor_x, top+y*factor_y)
+        self.connector_layer.set_size_request(width, height)
+        if measured:
+            for record,item in zip(self.connector_records,measured):
+                record['button'].set_size_request(item['width'],item['height'])
+            positions = layout_callouts(measured,left,top,image_width,image_height,width,height)
+            self.callout_positions = positions
+            for record in self.connector_records:
+                position = positions[record['key']]
+                canvas.move(record['button'],position['x'],position['y'])
+                record['points'] = position['points']
+            self.connector_layer.queue_draw()
         return True

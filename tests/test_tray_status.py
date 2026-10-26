@@ -10,9 +10,9 @@ class TrayStatusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ,XDG_RUNTIME_DIR=directory):
             self.assertEqual(battery_labels(),[])
             cache=BatteryCache([dict(path='/test',identity='test',device_index=2,name='Mouse',battery={'percentage':70})])
-            cache.rows[0]['updated']=100;cache.publish()
-            self.assertEqual(battery_labels(now=110),['Mouse: 70%'])
-            self.assertEqual(battery_labels(now=200),['Mouse: 70% (last known)'])
+            cache.rows[0].update(updated=100,battery_updated=100,last_seen=100,checked=100);cache.publish()
+            self.assertEqual(battery_labels(now=110),['Mouse: Connected · 70%'])
+            self.assertEqual(battery_labels(now=200),['Mouse: Status out of date · 70% · last read 1 min ago'])
             status_path().write_text('broken')
             self.assertEqual(battery_labels(),[])
 
@@ -35,7 +35,7 @@ class TrayStatusTests(unittest.TestCase):
             self.assertIsNone(warning_reason('Running',now=100))
             self.assertEqual(warning_reason('Stopped'), 'Background service stopped')
             cache=BatteryCache([dict(path='/test',identity='test',device_index=2,name='Mouse',battery={'percentage':20})])
-            cache.rows[0]['updated']=100;cache.publish()
+            cache.rows[0].update(updated=100,battery_updated=100,last_seen=100,checked=100);cache.publish()
             self.assertEqual(warning_reason('Running',now=110),'Low battery: Mouse')
             self.assertIsNone(warning_reason('Running',now=200))
             for value in (21,None,-1,True):

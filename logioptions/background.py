@@ -76,8 +76,15 @@ class BackgroundRing:
                     return
                 devices, errors = self.discover()
                 batteries = BatteryCache(devices)
-                mouse = next((d for d in devices if any(c['control_id'] == 416
-                             and c['flags'] & 0x20 for c in d.get('controls', []))), None)
+                from .button_actions import for_device
+                def needs_listener(descriptor):
+                    if any(c['control_id'] == 416 and c['flags'] & 0x20 for c in descriptor.get('controls', [])):
+                        return True
+                    try:
+                        return bool(for_device(descriptor.get('identity')))
+                    except (ValueError, OSError):
+                        return False
+                mouse = next((d for d in devices if needs_listener(d)), None)
                 if mouse:
                     indices = [255] if mouse['device_index'] == 255 else list(range(1, 7))
                     def maintain(transport):

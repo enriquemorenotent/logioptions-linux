@@ -7,7 +7,7 @@ from gi.repository import Gio
 source = Path(__file__).resolve().parents[1] / 'extensions/logioptions-ring@local'
 target = Path.home() / '.local/share/gnome-shell/extensions' / source.name
 target.mkdir(parents=True, exist_ok=True)
-for name in ('metadata.json', 'extension.js', 'stylesheet.css', 'profiles.js', 'actions.json'):
+for name in ('metadata.json', 'extension.js', 'stylesheet.css', 'profiles.js', 'buttons.js', 'actions.json'):
     shutil.copy2(source / name, target / name)
 settings = Gio.Settings.new('org.gnome.shell')
 enabled = list(settings.get_strv('enabled-extensions'))

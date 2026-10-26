@@ -30,7 +30,7 @@ def stage_payload(root, stage, version):
     copy('packaging/70-logioptions.rules','usr/lib/udev/rules.d/70-logioptions.rules')
     for name in ('ring','tray'):
         copy(f'packaging/logioptions-{name}.service',f'usr/lib/systemd/user/logioptions-{name}.service')
-    for name in ('metadata.json','extension.js','stylesheet.css','profiles.js','actions.json'):
+    for name in ('metadata.json','extension.js','stylesheet.css','profiles.js','buttons.js','actions.json'):
         copy('extensions/logioptions-ring@local/'+name,'usr/share/gnome-shell/extensions/logioptions-ring@local/'+name)
     copy('README.md','usr/share/doc/logioptions-linux/README.md')
     if (root/'LICENSE').exists():
