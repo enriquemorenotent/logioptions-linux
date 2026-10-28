@@ -42,3 +42,18 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual([(c.args[0], c.kwargs['timeout']) for c in transport.lookup_feature.call_args_list],
                          [(1,.25),(2,.25),(3,.25),(1,1.0),(3,1.0)])
+
+    def test_invalid_name_is_retried_and_reported_without_crashing_discovery(self):
+        for results, expected_devices, expected_errors in [
+            ([ValueError('Invalid device name'), {'name': 'MX Keys for Business'}],
+             [{'name': 'MX Keys for Business'}], []),
+            ([ValueError('Invalid device name')] * 2,
+             [], ['fake slot 1: Invalid device name']),
+        ]:
+            with self.subTest(results=results), \
+                 patch('logioptions.discovery.interfaces', return_value=[{'path': 'fake', 'indices': [1]}]), \
+                 patch('logioptions.discovery.LinuxHidppTransport') as factory, \
+                 patch('logioptions.discovery.snapshot', side_effect=results):
+                transport = factory.return_value.__enter__.return_value
+                transport.lookup_feature.return_value = {'index': 3}
+                self.assertEqual(discover(), (expected_devices, expected_errors))

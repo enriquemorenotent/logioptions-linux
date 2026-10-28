@@ -1,13 +1,12 @@
-LogiOptions 0.1.7 for Ubuntu 26.04 amd64 with GNOME 50.
+LogiOptions 0.1.8 for Ubuntu 26.04 amd64 with GNOME 50.
 
-- Assign common actions, recorded keyboard shortcuts, desktop actions, or Actions
-  Ring to supported mouse buttons. Assignments currently apply to all apps.
-- See button assignments on the mouse image, with connector lines and matching
-  highlights. Labels adapt when the settings panel opens or the window resizes.
-- See responding, unavailable, and disconnected devices with the age of their
-  last battery reading. Unavailable devices remain visible with read-only controls.
-- Inspect background services, GNOME extension readiness, and device communication
-  in App settings. Restart the listener there without changing login startup.
+- Fix MX Keys for Business occasionally appearing as a strange character followed
+  by "BL". Verify device feature replies before using them so a late firmware
+  reply cannot be mistaken for the keyboard name.
+- Reject invalid device names and retry discovery without interrupting other devices.
+
+Verified with the physical MX Keys for Business and MX Master 4, native UI checks,
+and a regression test that reproduces the delayed firmware reply.
 
 Upgrade through the GitHub Pages APT repository:
 
@@ -16,12 +15,10 @@ sudo apt update
 sudo apt install --only-upgrade logioptions-linux
 ```
 
-**Log out of Ubuntu and back in once after upgrading** to load the updated GNOME
-extension. Later button assignment edits do not require another login.
+Quit and reopen LogiOptions after upgrading to load the fix.
 Your saved device settings, ring profiles, and startup preference are preserved.
 
-This remains an experimental release. New direct button actions pass automated
-listener and native UI checks; physical end-to-end mouse verification is pending.
+This remains an experimental release.
 
 Third-party artwork and fonts are not GPL-licensed. Their owners retain all
 rights; redistribution permission has not been obtained. See assets/logitech/NOTICE.txt.

@@ -1,5 +1,24 @@
 # MX Keys for Business controls
 
+## Garbled device name (2026-10-28)
+
+The reported name `\x01BL` matches the physical keyboard's firmware entity 0
+reply exactly: feature `0x0003`, function 1 starts `01 42 4c`. Firmware function
+0 starts `03`, so treating firmware as feature `0x0005` reads three name bytes.
+The firmware and name feature indices on this keyboard are 2 and 3 respectively.
+
+ROOT lookup replies do not echo the requested feature ID. A delayed firmware
+lookup reply arriving after a new name lookup passes the existing header match;
+the pre-request queue drain cannot remove a reply that has not arrived yet.
+The original incident's traffic was not captured, but a socket regression
+reproduces this timing and the physical firmware bytes explain the exact label.
+
+Lookup now verifies every nonzero index using FEATURE SET's reverse lookup
+before returning it, retrying mismatches up to three times. Names containing
+control characters are rejected, and discovery retries invalid names without
+aborting other devices. Live discovery and an isolated native UI check both
+showed `MX Keys for Business`, with no device read errors.
+
 Implemented and read/write/restore tested on the physical keyboard, 2026-10-22.
 
 - Host-specific Fn inversion: feature 0x40A3, functions 0/1. Current host is read

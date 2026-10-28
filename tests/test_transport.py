@@ -4,6 +4,7 @@ import threading
 import unittest
 
 from logioptions.hidpp import LinuxHidppTransport, HidppError
+from logioptions.device import Device
 
 
 class TransportTests(unittest.TestCase):
@@ -67,3 +68,57 @@ class TransportTests(unittest.TestCase):
                 self.exchange([reply], lambda: self.transport.request(2, 11, 1, timeout=.1))
         with self.assertRaises(TimeoutError):
             self.exchange([], lambda: self.transport.request(2, 11, 1, timeout=.02))
+
+    def scripted_exchange(self, calls, operation):
+        failures = []
+        def receiver():
+            try:
+                for expected, replies in calls:
+                    self.assertEqual(self.peer.recv(64).hex(), expected)
+                    for reply in replies:
+                        self.peer.send(bytes.fromhex(reply))
+            except Exception as error:
+                failures.append(error)
+        thread = threading.Thread(target=receiver)
+        thread.start()
+        try:
+            return operation()
+        finally:
+            thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+            if failures:
+                raise failures[0]
+
+    def test_late_firmware_lookup_cannot_turn_keyboard_name_into_bl(self):
+        # The old firmware lookup timed out. Its reply arrives only AFTER the
+        # name lookup is sent, so draining queued reports cannot protect it.
+        def read_name():
+            with self.assertRaises(TimeoutError):
+                self.transport.lookup_feature(1, 3, timeout=.02)
+            return Device(self.transport, 1).name()
+        result = self.scripted_exchange([
+            ('10010001000300', []),
+            ('10010001000500', ['1101000102000400000000000000000000000000',
+                                '1101000103000000000000000000000000000000']),
+            ('10010111020000', ['1101011100030004000000000000000000000000']),
+            ('10010001000500', ['1101000103000000000000000000000000000000']),
+            ('10010111030000', ['1101011100050000000000000000000000000000']),
+            ('10010301000000', ['1101030114000000000000000000000000000000']),
+            ('10010311000000', ['110103114d58204b65797320666f722042757369']),
+            ('10010311100000', ['110103116e657373000000000000000000000000']),
+        ], read_name)
+        self.assertEqual(result, 'MX Keys for Business')
+
+    def test_unverifiable_feature_is_never_returned(self):
+        calls = [
+            ('10010001000500', ['1101000102000400000000000000000000000000']),
+            ('10010111020000', ['1101011100030004000000000000000000000000']),
+        ] * 3
+        with self.assertRaisesRegex(TimeoutError, 'Could not verify'):
+            self.scripted_exchange(calls, lambda: self.transport.lookup_feature(1, 5))
+
+    def test_absent_feature_needs_no_reverse_lookup(self):
+        result = self.scripted_exchange([
+            ('1001000119b000', ['1101000100000000000000000000000000000000']),
+        ], lambda: self.transport.lookup_feature(1, 0x19b0))
+        self.assertEqual(result['index'], 0)

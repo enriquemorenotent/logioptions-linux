@@ -132,7 +132,10 @@ class Device:
             if not chunk:
                 raise ValueError('Empty device name chunk')
             chunks.extend(chunk)
-        return bytes(chunks).decode('utf-8')
+        name = bytes(chunks).decode('utf-8')
+        if not name.strip() or not name.isprintable():
+            raise ValueError('Invalid device name')
+        return name
 
     def kind_code(self):
         return self.request(0x0005, 2)[0]

@@ -3,14 +3,19 @@ from pathlib import Path
 import unittest
 
 from logioptions.device import Device
-from logioptions.hidpp import LinuxHidppTransport, encode_report
+from logioptions.hidpp import encode_report, root_lookup_payload
 from logioptions.haptics import play_waveform
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReplayTransport:
-    lookup_feature = LinuxHidppTransport.lookup_feature
+    def lookup_feature(self, device_index, feature_id, *, timeout=2):
+        # Historical captures predate transport-level reverse verification.
+        # Replay their original lookup traffic to keep checking Device payloads;
+        # test_transport exercises the current lookup and late-reply handling.
+        report = self.request(device_index, 0, 0, root_lookup_payload(feature_id), timeout=timeout)
+        return dict(index=report[4], flags=report[5], version=report[6], report_hex=report.hex())
 
     def __init__(self, testcase, traffic):
         self.testcase = testcase

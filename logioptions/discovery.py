@@ -99,7 +99,7 @@ def discover():
                             device.features[0x0005] = feature
                             devices.append(snapshot(device, interface['path']))
                             failures.pop(index, None)
-                        except (TimeoutError, HidppError) as error:
+                        except (TimeoutError, HidppError, ValueError) as error:
                             retry.append(index)
                             if identified:
                                 failures[index] = f"{interface['path']} slot {index}: {error}"

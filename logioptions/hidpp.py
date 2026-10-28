@@ -141,8 +141,21 @@ class LinuxHidppTransport:
                     return report
 
     def lookup_feature(self, device_index, feature_id, *, timeout=2):
-        report = self.request(device_index, 0, 0, root_lookup_payload(feature_id), timeout=timeout)
-        return dict(index=report[4], flags=report[5], version=report[6], report_hex=report.hex())
+        payload = root_lookup_payload(feature_id)
+        for _ in range(3):
+            report = self.request(device_index, 0, 0, payload, timeout=timeout)
+            index = report[4]
+            if index:
+                # ROOT replies do not echo the requested feature ID. A late
+                # firmware lookup can otherwise route name reads to firmware
+                # info (whose first entity starts with b'\x01BL'). FEATURE SET
+                # is the mandatory feature at index 1; reverse-check the index
+                # before caching or using it, including for settings writes.
+                entry = self.request(device_index, 1, 1, bytes([index]), timeout=timeout)
+                if entry[4:6] != payload:
+                    continue
+            return dict(index=index, flags=report[5], version=report[6], report_hex=report.hex())
+        raise TimeoutError(f'Could not verify HID++ feature 0x{feature_id:04x}; retry the operation')
 
     def read_notification(self, *, timeout=1):
         if timeout <= 0:

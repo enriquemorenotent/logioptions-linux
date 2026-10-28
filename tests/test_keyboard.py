@@ -5,6 +5,13 @@ from logioptions.device import Device
 
 
 class KeyboardTests(unittest.TestCase):
+    def test_rejects_firmware_bytes_and_empty_names(self):
+        for raw in (b'\x01BL', b'\0RB', b'', b'   ', b'MX\nKeys'):
+            with self.subTest(raw=raw), self.assertRaisesRegex(ValueError, 'Invalid device name'):
+                device = Device(Mock(), 1)
+                device.request = Mock(side_effect=[bytes([len(raw)]), raw])
+                device.name()
+
     def test_fn_uses_active_host_and_verifies(self):
         d = Device(Mock(), 1)
         d.feature = Mock()
