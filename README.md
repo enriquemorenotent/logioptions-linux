@@ -13,6 +13,7 @@ these third-party assets are separate from the GPL-licensed application code.*
 
 ## Make your mouse feel right
 
+- **Receiver pairing:** add and remove devices on Logi Bolt and Unifying USB receivers, with guided Bolt verification.
 - **Pointer speed:** adjust your mouse’s DPI.
 - **Scrolling:** control wheel mode and SmartShift, plus vertical and thumb-wheel direction.
 - **Buttons:** assign common shortcuts, recorded keyboard shortcuts, desktop actions,
@@ -80,6 +81,25 @@ alone does not add an update repository.
 - `logioptions --version` — show the installed version.
 - `logioptions status` — show background services and latest device readings.
 - `logioptions --help` — list commands, including advanced device tools.
+
+## Add or remove a device
+
+Open **Add / manage devices** in the app's top bar. Select a Logi Bolt or
+Unifying USB receiver, then choose **Pair new device**. Put the device in pairing
+mode and follow the instructions. Bolt asks you to confirm the discovered device
+and verify it using a keyboard passcode or mouse-click sequence.
+
+The receiver window also lists paired devices that are asleep or disconnected.
+Choose **Unpair** to remove one; the app asks for confirmation first. Bluetooth
+connections are managed through your desktop's Bluetooth settings.
+
+Receiver pairing is new: inventory, discovery cancellation, and successful
+MX Keys for Business pairing have been checked on real Bolt hardware. Physical
+mouse pairing, removal, and Unifying validation are still pending.
+
+If verification receives your keypresses but then times out, try unplugging and
+reconnecting the receiver before pairing again. This resolved one observed
+keyboard pairing failure; the underlying cause has not been established. See [receiver protocol and testing notes](research/RECEIVER-PAIRING.md).
 
 ## Help shape what comes next
 

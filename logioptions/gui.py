@@ -52,8 +52,19 @@ class OptionsWindow(Presentation, Adw.ApplicationWindow):
 
     def on_close(self, *_):
         self.closed = True
+        receiver_window = getattr(self, 'receiver_window', None)
+        if receiver_window and not receiver_window.closed:
+            receiver_window.request_close()
         self.pool.shutdown(wait=False, cancel_futures=True)
         return False
+
+    def show_receivers(self):
+        from .receiver_ui import ReceiverWindow
+        window = getattr(self, 'receiver_window', None)
+        if window is None or window.closed:
+            window = ReceiverWindow(self)
+            self.receiver_window = window
+        window.present()
 
     def run(self, work, done, status):
         if self.busy or self.closed:

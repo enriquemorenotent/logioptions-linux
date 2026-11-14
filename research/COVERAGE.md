@@ -16,7 +16,7 @@ Hardware available: MX Master 4 and MX Keys for Business. Evidence is local unde
 | Keyboard customization, backlight, Fn | Host-specific Fn mode; backlight mode, level and three timers for 0x1982 v3 | MX Keys for Business read/write/restore verified; see [keyboard controls](KEYBOARD-CONTROLS.md). Reconnect persistence and other keyboard customization unfinished |
 | Smart Actions, macros, scheduling | Research only | Unfinished |
 | Flow, clipboard and file transfer | Research only | Unfinished |
-| Pairing and host switching | Research only | Unfinished |
+| Receiver pairing and unpairing | Bolt and Unifying register transport, inventory, guided pairing and confirmed removal | Physical Bolt inventory, discovery cancellation, and MX Keys for Business pairing verified; physical mouse pairing, removal, and Unifying validation pending. Host switching remains unfinished. See [receiver pairing](RECEIVER-PAIRING.md). |
 | Account, backup, restore | Research only | Unfinished |
 | Plugins and application integrations | Research only | Unfinished |
 | Firmware updates | Research only | Unfinished |
